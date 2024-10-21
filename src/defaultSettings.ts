@@ -1,137 +1,234 @@
+import { textOptions, lineOptions, iconOptions, colourOptions, borderOptions } from "./validSettingValues";
+
 const defaultSettings = {
   canvas: {
-    lower_padding: 10,
-    upper_padding: 10,
-    left_padding: 10,
-    right_padding: 10
+    show_errors: { default: true },
+    lower_padding: { default: 10 },
+    upper_padding: { default: 10 },
+    left_padding: { default: 10 },
+    right_padding: { default: 10 }
   },
   spc: {
-    chart_type: "i",
-    outliers_in_limits: false,
-    multiplier: 1,
-    sig_figs: 2,
-    perc_labels: "Automatic",
-    split_on_click: false,
-    ll_truncate: <number>(null),
-    ul_truncate: <number>(null),
-    alt_target: <number>(null)
+    chart_type: { default: "i", valid: ["run", "i", "i_m", "i_mm", "mr", "p", "pp", "u", "up", "c", "xbar", "s", "g", "t"] },
+    outliers_in_limits: { default: false },
+    multiplier: { default: 1, valid: { numberRange: { min: 0 } } },
+    sig_figs: { default: 2, valid: { numberRange: { min: 0, max: 20 } } },
+    perc_labels: { default: "Automatic", valid: ["Automatic", "Yes", "No"]},
+    split_on_click: { default: false },
+    ttip_show_numerator: { default: true },
+    ttip_label_numerator: { default: "Numerator"},
+    ttip_show_denominator: { default: true },
+    ttip_label_denominator: { default: "Denominator"},
+    ttip_show_value: { default: true },
+    ttip_label_value: { default: "Automatic"},
+    ll_truncate: { default: <number>null },
+    ul_truncate: { default: <number>null }
   },
   outliers: {
-    process_flag_type: "both",
-    improvement_direction: "increase",
-    flag_series: true,
-    astronomical: false,
-    ast_colour_improvement: "#00B0F0",
-    ast_colour_deterioration: "#E46C0A",
-    ast_colour_neutral_low: "#490092",
-    ast_colour_neutral_high: "#490092",
-    shift: false,
-    shift_n: 7,
-    shift_colour_improvement: "#00B0F0",
-    shift_colour_deterioration: "#E46C0A",
-    shift_colour_neutral_low: "#490092",
-    shift_colour_neutral_high: "#490092",
-    trend: false,
-    trend_n: 5,
-    trend_colour_improvement: "#00B0F0",
-    trend_colour_deterioration: "#E46C0A",
-    trend_colour_neutral_low: "#490092",
-    trend_colour_neutral_high: "#490092",
-    two_in_three: false,
-    twointhree_colour_improvement: "#00B0F0",
-    twointhree_colour_deterioration: "#E46C0A",
-    twointhree_colour_neutral_low: "#490092",
-    twointhree_colour_neutral_high: "#490092"
+    process_flag_type: { default: "both", valid: ["both", "improvement", "deterioration"]},
+    improvement_direction: { default: "increase", valid: ["increase", "neutral", "decrease"]},
+    astronomical: { default: false },
+    astronomical_limit: { default: "3 Sigma", valid: ["1 Sigma", "2 Sigma", "3 Sigma", "Specification"]},
+    ast_colour_improvement: colourOptions.improvement,
+    ast_colour_deterioration: colourOptions.deterioration,
+    ast_colour_neutral_low: colourOptions.neutral_low,
+    ast_colour_neutral_high: colourOptions.neutral_high,
+    shift: { default: false },
+    shift_n: { default: 7, valid: { numberRange: { min: 1 } } },
+    shift_colour_improvement: colourOptions.improvement,
+    shift_colour_deterioration: colourOptions.deterioration,
+    shift_colour_neutral_low: colourOptions.neutral_low,
+    shift_colour_neutral_high: colourOptions.neutral_high,
+    trend: { default: false },
+    trend_n: { default: 5, valid: { numberRange: { min: 1 } } },
+    trend_colour_improvement: colourOptions.improvement,
+    trend_colour_deterioration: colourOptions.deterioration,
+    trend_colour_neutral_low: colourOptions.neutral_low,
+    trend_colour_neutral_high: colourOptions.neutral_high,
+    two_in_three: { default: false },
+    two_in_three_highlight_series: { default: false },
+    two_in_three_limit: { default: "2 Sigma", valid: ["1 Sigma", "2 Sigma", "3 Sigma", "Specification"]},
+    twointhree_colour_improvement: colourOptions.improvement,
+    twointhree_colour_deterioration: colourOptions.deterioration,
+    twointhree_colour_neutral_low: colourOptions.neutral_low,
+    twointhree_colour_neutral_high: colourOptions.neutral_high
   },
   nhs_icons: {
-    show_variation_icons: false,
-    flag_variation_last: true,
-    variation_icons_locations: "Top Right",
-    variation_icons_scaling: 1,
-    show_assurance_icons: false,
-    assurance_icons_locations: "Top Right",
-    assurance_icons_scaling: 1
+    flag_last_point: { default: true },
+    show_variation_icons: { default: false },
+    variation_icons_locations: iconOptions.location,
+    variation_icons_scaling: iconOptions.scaling,
+    show_assurance_icons: { default: false },
+    assurance_icons_locations: iconOptions.location,
+    assurance_icons_scaling: iconOptions.scaling
   },
   scatter: {
-    size: 2.5,
-    colour: "#000000",
-    opacity: 1,
-    opacity_unselected: 0.2
+    size: { default: 2.5, valid: { numberRange: { min: 0, max: 100 }}},
+    colour: colourOptions.standard,
+    opacity: { default: 1, valid: { numberRange: { min: 0, max: 1 } } },
+    opacity_unselected: { default: 0.2, valid: { numberRange: { min: 0, max: 1 } } }
   },
   lines: {
-    width_99: 2,
-    width_95: 2,
-    width_main: 1,
-    width_target: 1.5,
-    width_alt_target: 1.5,
-    type_99: "10 10",
-    type_95: "2 5",
-    type_main: "10 0",
-    type_target: "10 0",
-    type_alt_target: "10 0",
-    colour_99: "#6495ED",
-    colour_95: "#6495ED",
-    colour_main: "#000000",
-    colour_target: "#000000",
-    colour_alt_target: "#000000"
+    show_99: { default: true },
+    show_95: { default: true },
+    show_68: { default: false },
+    show_main: { default: true },
+    show_target: { default: true },
+    show_alt_target: { default: false },
+    show_specification: { default: false },
+    width_99: { default: 2, valid: lineOptions.width.valid },
+    width_95: { default: 2, valid: lineOptions.width.valid },
+    width_68: { default: 2, valid: lineOptions.width.valid },
+    width_main: { default: 1, valid: lineOptions.width.valid },
+    width_target: { default: 1.5, valid: lineOptions.width.valid },
+    width_alt_target: { default: 1.5, valid: lineOptions.width.valid },
+    width_specification: { default: 2, valid: lineOptions.width.valid },
+    type_99: { default: "10 10", valid: lineOptions.type.valid },
+    type_95: { default: "2 5", valid: lineOptions.type.valid },
+    type_68: { default: "2 5", valid: lineOptions.type.valid },
+    type_main: { default: "10 0", valid: lineOptions.type.valid },
+    type_target: { default: "10 0", valid: lineOptions.type.valid },
+    type_alt_target: { default: "10 0", valid: lineOptions.type.valid },
+    type_specification: { default: "10 10", valid: lineOptions.type.valid },
+    colour_99: colourOptions.limits,
+    colour_95: colourOptions.limits,
+    colour_68: colourOptions.limits,
+    colour_main: colourOptions.standard,
+    colour_target: colourOptions.standard,
+    colour_alt_target: colourOptions.standard,
+    colour_specification: colourOptions.limits,
+    ttip_show_99: { default: true },
+    ttip_show_95: { default: false },
+    ttip_show_68: { default: false },
+    ttip_show_target: { default: true },
+    ttip_show_alt_target: { default: true },
+    ttip_show_specification: { default: true },
+    ttip_label_99: { default: "99% Limit" },
+    ttip_label_95: { default: "95% Limit" },
+    ttip_label_68: { default: "68% Limit" },
+    ttip_label_target: { default: "Centerline" },
+    ttip_label_alt_target: { default: "Alt. Target" },
+    ttip_label_specification: { default: "Specification Limit" },
+    alt_target: { default: <number>null },
+    specification_upper: { default: <number>null },
+    specification_lower: { default: <number>null },
+    multiplier_alt_target: { default: false },
+    multiplier_specification: { default: false }
   },
   x_axis: {
-    xlimit_colour: "#000000",
-    xlimit_ticks: true,
-    xlimit_tick_font: "'Arial', sans-serif",
-    xlimit_tick_size: 10,
-    xlimit_tick_colour: "#000000",
-    xlimit_tick_rotation: -35,
-    xlimit_tick_count: <number>(null),
-    xlimit_label:<string>(null),
-    xlimit_label_font: "'Arial', sans-serif",
-    xlimit_label_size: 10,
-    xlimit_label_colour: "#000000",
-    xlimit_l: <number>(null),
-    xlimit_u: <number>(null)
+    xlimit_colour: colourOptions.standard,
+    xlimit_ticks: { default: true },
+    xlimit_tick_font: textOptions.font,
+    xlimit_tick_size: textOptions.size,
+    xlimit_tick_colour: colourOptions.standard,
+    xlimit_tick_rotation: { default: -35, valid: { numberRange: { min: -360, max: 360 }}},
+    xlimit_tick_count: { default: 10, valid: { numberRange: { min: 0, max: 100 }}},
+    xlimit_label: { default: <string>null },
+    xlimit_label_font: textOptions.font,
+    xlimit_label_size: textOptions.size,
+    xlimit_label_colour: colourOptions.standard,
+    xlimit_l: { default: <number>null },
+    xlimit_u: { default: <number>null }
   },
   y_axis: {
-    ylimit_colour: "#000000",
-    ylimit_ticks: true,
-    ylimit_tick_font: "'Arial', sans-serif",
-    ylimit_tick_size: 10,
-    ylimit_tick_colour: "#000000",
-    ylimit_tick_rotation: 0,
-    ylimit_tick_count: <number>(null),
-    ylimit_label:<string>(null),
-    ylimit_label_font: "'Arial', sans-serif",
-    ylimit_label_size: 10,
-    ylimit_label_colour: "#000000",
-    ylimit_l: <number>(null),
-    ylimit_u: <number>(null),
-    limit_multiplier: 1.5,
-    ylimit_sig_figs: <number>(null)
+    ylimit_colour: colourOptions.standard,
+    ylimit_ticks: { default: true },
+    ylimit_tick_font: textOptions.font,
+    ylimit_tick_size: textOptions.size,
+    ylimit_tick_colour: colourOptions.standard,
+    ylimit_tick_rotation: { default: 0, valid: { numberRange: { min: -360, max: 360 }}},
+    ylimit_tick_count: { default: 10, valid: { numberRange: { min: 0, max: 100 }}},
+    ylimit_label: { default: <string>null },
+    ylimit_label_font: textOptions.font,
+    ylimit_label_size: textOptions.size,
+    ylimit_label_colour: colourOptions.standard,
+    ylimit_l: { default: <number>null },
+    ylimit_u: { default: <number>null },
+    limit_multiplier: { default: 1.5, valid: { numberRange: { min: 0} } },
+    ylimit_sig_figs: { default: <number>null }
   },
   dates: {
-    date_format_day: "DD",
-    date_format_month: "MM",
-    date_format_year: "YYYY",
-    date_format_delim: "/",
-    date_format_locale: "en-GB"
+    date_format_day: { default: "DD", valid: ["DD", "Thurs DD", "Thursday DD", "(blank)"]},
+    date_format_month: { default: "MM", valid: ["MM", "Mon", "Month", "(blank)"]},
+    date_format_year: { default: "YYYY", valid: ["YYYY", "YY", "(blank)"]},
+    date_format_delim: { default: "/", valid: ["/", "-", " "]},
+    date_format_locale: { default: "en-GB", valid: ["en-GB", "en-US"]}
+  },
+  summary_table: {
+    show_table: { default: false },
+    table_text_overflow: textOptions.text_overflow,
+    table_opacity: { default: 1, valid: { numberRange: { min: 0, max: 1 } } },
+    table_opacity_unselected: { default: 0.2, valid: { numberRange: { min: 0, max: 1 } } },
+    table_outer_border_style: borderOptions.style,
+    table_outer_border_width: borderOptions.width,
+    table_outer_border_colour: borderOptions.colour,
+    table_outer_border_top: { default: true },
+    table_outer_border_bottom: { default: true },
+    table_outer_border_left: { default: true },
+    table_outer_border_right: { default: true },
+    table_header_font: textOptions.font,
+    table_header_font_weight: textOptions.weight,
+    table_header_text_transform: textOptions.text_transform,
+    table_header_text_align: textOptions.text_align,
+    table_header_text_padding: {default: 1, valid: { numberRange: { min: 0, max: 100 }}},
+    table_header_size: textOptions.size,
+    table_header_colour: colourOptions.standard,
+    table_header_bg_colour: { default: "#D3D3D3" },
+    table_header_border_style: borderOptions.style,
+    table_header_border_width: borderOptions.width,
+    table_header_border_colour: borderOptions.colour,
+    table_header_border_bottom: { default: true },
+    table_header_border_inner: { default: true },
+    table_body_font: textOptions.font,
+    table_body_font_weight: textOptions.weight,
+    table_body_text_transform: textOptions.text_transform,
+    table_body_text_align: textOptions.text_align,
+    table_body_text_padding: {default: 1, valid: { numberRange: { min: 0, max: 100 }}},
+    table_body_size: textOptions.size,
+    table_body_colour: colourOptions.standard,
+    table_body_bg_colour: { default: "#FFFFFF" },
+    table_body_border_style: borderOptions.style,
+    table_body_border_width: borderOptions.width,
+    table_body_border_colour: borderOptions.colour,
+    table_body_border_top_bottom: { default: true },
+    table_body_border_left_right: { default: true }
+  },
+  download_options: {
+    show_button: { default: false }
   }
 };
 
-export const settingsPaneGroupings = {
+
+type DefaultTypes<T> = T[Extract<keyof T, "default">];
+export type NestedKeysOf<T>
+  = T extends object
+    ? { [K in keyof T]: K extends string ? K : never; }[keyof T]
+    : never;
+
+export type defaultSettingsType = {
+  [K in keyof typeof defaultSettings]: {
+    [L in keyof typeof defaultSettings[K]]: DefaultTypes<typeof defaultSettings[K][L]>
+  }
+}
+export type defaultSettingsKeys = keyof defaultSettingsType;
+export type defaultSettingsNestedKeys = NestedKeysOf<defaultSettingsType[defaultSettingsKeys]>;
+
+export const settingsPaneGroupings: Partial<Record<defaultSettingsKeys, Record<string, defaultSettingsNestedKeys[]>>> = {
   outliers: {
-    "Astronomical Points": ["process_flag_type", "improvement_direction", "flag_series", "astronomical", "ast_colour_improvement", "ast_colour_deterioration", "ast_colour_neutral_low", "ast_colour_neutral_high"],
-    "Shifts": ["process_flag_type", "improvement_direction", "flag_series", "shift", "shift_n", "shift_colour_improvement", "shift_colour_deterioration", "shift_colour_neutral_low", "shift_colour_neutral_high"],
-    "Trends": ["process_flag_type", "improvement_direction", "flag_series", "trend", "trend_n", "trend_colour_improvement", "trend_colour_deterioration", "trend_colour_neutral_low", "trend_colour_neutral_high"],
-    "Two-In-Three": ["process_flag_type", "improvement_direction", "flag_series", "two_in_three", "twointhree_colour_improvement", "twointhree_colour_deterioration", "twointhree_colour_neutral_low", "twointhree_colour_neutral_high"]
-  },
-  nhs_icons: {
-    "Variation": ["show_variation_icons", "flag_variation_last", "variation_icons_locations", "variation_icons_scaling"],
-    "Assurance": ["show_assurance_icons", "assurance_icons_locations", "assurance_icons_scaling"]
+    "General": ["process_flag_type", "improvement_direction"],
+    "Astronomical Points": ["astronomical", "astronomical_limit", "ast_colour_improvement", "ast_colour_deterioration", "ast_colour_neutral_low", "ast_colour_neutral_high"],
+    "Shifts": ["shift", "shift_n", "shift_colour_improvement", "shift_colour_deterioration", "shift_colour_neutral_low", "shift_colour_neutral_high"],
+    "Trends": ["trend", "trend_n", "trend_colour_improvement", "trend_colour_deterioration", "trend_colour_neutral_low", "trend_colour_neutral_high"],
+    "Two-In-Three": ["two_in_three", "two_in_three_highlight_series", "two_in_three_limit", "twointhree_colour_improvement", "twointhree_colour_deterioration", "twointhree_colour_neutral_low", "twointhree_colour_neutral_high"]
   },
   lines: {
-    "Main": ["width_main", "type_main", "colour_main"],
-    "Target(s)": ["width_target", "type_target", "colour_target", "width_alt_target", "type_alt_target", "colour_alt_target"],
-    "95% Limits": ["width_95", "type_95", "colour_95"],
-    "99% Limits": ["width_99", "type_99", "colour_99"]
+    "Main": ["show_main", "width_main", "type_main", "colour_main"],
+    "Target": ["show_target", "width_target", "type_target", "colour_target", "ttip_show_target", "ttip_label_target"],
+    "Alt. Target": ["show_alt_target", "alt_target", "multiplier_alt_target", "width_alt_target", "type_alt_target", "colour_alt_target", "ttip_show_alt_target", "ttip_label_alt_target"],
+    "68% Limits": ["show_68", "width_68", "type_68", "colour_68", "ttip_show_68", "ttip_label_68"],
+    "95% Limits": ["show_95", "width_95", "type_95", "colour_95", "ttip_show_95", "ttip_label_95"],
+    "99% Limits": ["show_99", "width_99", "type_99", "colour_99", "ttip_show_99", "ttip_label_99"],
+    "Specification Limits": ["show_specification", "specification_upper", "specification_lower", "multiplier_specification", "width_specification", "type_specification", "colour_specification", "ttip_show_specification", "ttip_label_specification"]
   },
   x_axis: {
     "Axis": ["xlimit_colour", "xlimit_l", "xlimit_u"],
@@ -142,6 +239,11 @@ export const settingsPaneGroupings = {
     "Axis": ["ylimit_colour", "limit_multiplier", "ylimit_sig_figs", "ylimit_l", "ylimit_u"],
     "Ticks": ["ylimit_ticks", "ylimit_tick_count", "ylimit_tick_font", "ylimit_tick_size", "ylimit_tick_colour", "ylimit_tick_rotation"],
     "Label": ["ylimit_label", "ylimit_label_font", "ylimit_label_size", "ylimit_label_colour"]
+  },
+  summary_table: {
+    "General": ["show_table", "table_text_overflow", "table_opacity", "table_opacity_unselected", "table_outer_border_style", "table_outer_border_width", "table_outer_border_colour", "table_outer_border_top", "table_outer_border_bottom", "table_outer_border_left", "table_outer_border_right"],
+    "Header": ["table_header_font", "table_header_size", "table_header_text_align", "table_header_font_weight", "table_header_text_transform", "table_header_text_padding", "table_header_colour", "table_header_bg_colour", "table_header_border_style", "table_header_border_width", "table_header_border_colour", "table_header_border_bottom", "table_header_border_inner"],
+    "Body": ["table_body_font", "table_body_size", "table_body_text_align", "table_body_font_weight", "table_body_text_transform", "table_body_text_padding", "table_body_colour", "table_body_bg_colour", "table_body_border_style", "table_body_border_width", "table_body_border_colour", "table_body_border_top_bottom", "table_body_border_left_right"]
   }
 }
 

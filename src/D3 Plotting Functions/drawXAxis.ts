@@ -22,7 +22,7 @@ export default function drawXAxis(selection: svgBaseType, visualObj: Visual, ref
     xAxis.tickValues([]);
   }
 
-  const plotHeight: number = visualObj.viewModel.plotProperties.height;
+  const plotHeight: number = visualObj.viewModel.svgHeight;
   const xAxisHeight: number = plotHeight - visualObj.viewModel.plotProperties.yAxis.start_padding;
   const displayPlot: boolean = visualObj.viewModel.plotProperties.displayPlot;
   const xAxisGroup = selection.select(".xaxisgroup") as d3.Selection<SVGGElement, unknown, null, undefined>;
@@ -44,7 +44,7 @@ export default function drawXAxis(selection: svgBaseType, visualObj: Visual, ref
       .style("font-family", xAxisProperties.tick_font)
       .style("fill", displayPlot ? xAxisProperties.tick_colour : "#FFFFFF");
 
-  const xAxisNode: SVGGElement = selection.selectAll(".xaxisgroup").selectAll(".tick text").node() as SVGGElement;
+  const xAxisNode: SVGGElement = selection.selectAll(".xaxisgroup").node() as SVGGElement;
   if (!xAxisNode) {
     selection.select(".xaxislabel")
               .style("fill", displayPlot ? xAxisProperties.label_colour : "#FFFFFF");
@@ -64,7 +64,9 @@ export default function drawXAxis(selection: svgBaseType, visualObj: Visual, ref
       if (tickLeftofPadding < 0) {
         visualObj.viewModel.plotProperties.xAxis.start_padding += abs(tickLeftofPadding)
       }
-      visualObj.viewModel.plotProperties.initialiseScale();
+      visualObj.viewModel.plotProperties.initialiseScale(visualObj.viewModel.svgWidth,
+                                                          visualObj.viewModel.svgHeight
+      );
       selection.call(drawXAxis, visualObj, true);
       return;
     }
@@ -73,7 +75,7 @@ export default function drawXAxis(selection: svgBaseType, visualObj: Visual, ref
   const bottomMidpoint: number = plotHeight - ((plotHeight - xAxisCoordinates.bottom) / 2);
 
   selection.select(".xaxislabel")
-            .attr("x",visualObj.viewModel.plotProperties.width / 2)
+            .attr("x",visualObj.viewModel.svgWidth / 2)
             .attr("y", bottomMidpoint)
             .style("text-anchor", "middle")
             .text(xAxisProperties.label)

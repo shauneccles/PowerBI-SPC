@@ -1,12 +1,12 @@
 import type powerbi from "powerbi-visuals-api";
-import { validationErrorClass, type defaultSettingsType } from "../Classes";
+import { settingsClass } from "../Classes";
 
-export default function validateDataView(inputDV: powerbi.DataView[], inputSettings: defaultSettingsType) {
+export default function validateDataView(inputDV: powerbi.DataView[], inputSettingsClass: settingsClass): string {
   if (!(inputDV?.[0])) {
-    throw(new validationErrorClass("No data present"));
+    return "No data present";
   }
-  if (!(inputDV[0]?.categorical?.categories?.[0]?.values?.length > 0)) {
-    throw(new validationErrorClass("No grouping/ID variable passed!"));
+  if (!(inputDV[0]?.categorical?.categories) || !(inputDV[0]?.categorical?.categories.some(d => d.source?.roles?.key))) {
+    return "No grouping/ID variable passed!";
   }
 
   const numeratorsPresent: boolean
@@ -15,29 +15,51 @@ export default function validateDataView(inputDV: powerbi.DataView[], inputSetti
                    ?.some(d => d.source?.roles?.numerators);
 
   if (!numeratorsPresent) {
-    throw(new validationErrorClass("No Numerators passed!"));
+    return "No Numerators passed!";
   }
-  const chart_type: string = inputSettings.spc.chart_type;
-  const denominatorRequired: string[] = ["p", "pp", "u", "up", "xbar", "s"];
-  if (denominatorRequired.includes(chart_type)) {
+
+  let needs_denominator: boolean;
+  let needs_sd: boolean;
+  let chart_type: string;
+
+  if (inputSettingsClass?.derivedSettingsGrouped) {
+    inputSettingsClass?.derivedSettingsGrouped.forEach((d) => {
+      if (d.chart_type_props.needs_denominator) {
+        chart_type = d.chart_type_props.name;
+        needs_denominator = true;
+      }
+      if (d.chart_type_props.needs_sd) {
+        chart_type = d.chart_type_props.name;
+        needs_sd = true;
+      }
+    });
+  } else {
+    chart_type = inputSettingsClass.settings.spc.chart_type;
+    needs_denominator = inputSettingsClass.derivedSettings.chart_type_props.needs_denominator;
+    needs_sd = inputSettingsClass.derivedSettings.chart_type_props.needs_sd;
+  }
+
+  if (needs_denominator) {
     const denominatorsPresent: boolean
       = inputDV[0].categorical
                      ?.values
                      ?.some(d => d.source?.roles?.denominators);
 
     if (!denominatorsPresent) {
-      throw(new validationErrorClass(`Chart type '${chart_type}' requires denominators!`));
+      return `Chart type '${chart_type}' requires denominators!`;
     }
   }
 
-  if (chart_type === "xbar") {
+  if (needs_sd) {
     const xbarSDPresent: boolean
       = inputDV[0].categorical
                      ?.values
                      ?.some(d => d.source?.roles?.xbar_sds);
 
     if (!xbarSDPresent) {
-      throw(new validationErrorClass(`Chart type '${chart_type}' requires SDs!`));
+      return `Chart type '${chart_type}' requires SDs!`;
     }
   }
+
+  return "valid";
 }

@@ -1,5 +1,5 @@
 import * as d3 from "./D3 Modules";
-import { abs } from "../Functions";
+import { abs, isNullOrUndefined } from "../Functions";
 import drawXAxis from "./drawXAxis";
 import type { axisProperties } from "../Classes";
 import type { svgBaseType, Visual } from "../visual";
@@ -8,7 +8,7 @@ export default function drawYAxis(selection: svgBaseType, visualObj: Visual, ref
   const yAxisProperties: axisProperties = visualObj.viewModel.plotProperties.yAxis;
   const yAxis: d3.Axis<d3.NumberValue> = d3.axisLeft(visualObj.viewModel.plotProperties.yScale);
   const yaxis_sig_figs: number = visualObj.viewModel.inputSettings.settings.y_axis.ylimit_sig_figs;
-  const sig_figs: number = yaxis_sig_figs === null ? visualObj.viewModel.inputSettings.settings.spc.sig_figs : yaxis_sig_figs;
+  const sig_figs: number = isNullOrUndefined(yaxis_sig_figs) ? visualObj.viewModel.inputSettings.settings.spc.sig_figs : yaxis_sig_figs;
   const displayPlot: boolean = visualObj.viewModel.plotProperties.displayPlot;
 
   if (yAxisProperties.ticks) {
@@ -43,7 +43,7 @@ export default function drawYAxis(selection: svgBaseType, visualObj: Visual, ref
       .style("font-family", yAxisProperties.tick_font)
       .style("fill", displayPlot ? yAxisProperties.tick_colour : "#FFFFFF");
 
-  const yAxisNode: SVGGElement = selection.selectAll(".yaxisgroup").selectAll(".tick text").node() as SVGGElement;
+  const yAxisNode: SVGGElement = selection.selectAll(".yaxisgroup").node() as SVGGElement;
   if (!yAxisNode) {
     selection.select(".yaxislabel")
               .style("fill", displayPlot ? yAxisProperties.label_colour : "#FFFFFF");
@@ -53,18 +53,18 @@ export default function drawYAxis(selection: svgBaseType, visualObj: Visual, ref
 
   const settingsPadding: number = visualObj.viewModel.inputSettings.settings.canvas.left_padding
   const tickLeftofPadding: number = yAxisCoordinates.left - settingsPadding;
-
   if (tickLeftofPadding < 0) {
     if (!refresh) {
       visualObj.viewModel.plotProperties.xAxis.start_padding += abs(tickLeftofPadding)
-      visualObj.viewModel.plotProperties.initialiseScale();
+      visualObj.viewModel.plotProperties.initialiseScale(visualObj.viewModel.svgWidth,
+                                                          visualObj.viewModel.svgHeight);
       selection.call(drawYAxis, visualObj, true).call(drawXAxis, visualObj, true);
       return;
     }
   }
 
   const leftMidpoint: number = yAxisCoordinates.x * 0.7;
-  const y: number = visualObj.viewModel.plotProperties.height / 2;
+  const y: number = visualObj.viewModel.svgHeight / 2;
 
   selection.select(".yaxislabel")
       .attr("x",leftMidpoint)

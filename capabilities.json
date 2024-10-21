@@ -1,6 +1,7 @@
 {
   "supportsHighlight": true,
   "supportsKeyboardFocus": true,
+  "supportsMultiVisualSelection": true,
   "sorting": {
     "implicit": { "clauses": [{ "role": "key", "direction": 1 }] }
   },
@@ -9,13 +10,17 @@
     "roles": [ "tooltips" ],
     "supportEnhancedTooltips": true
   },
-  "privileges": [],
+  "privileges": [
+    { "name": "ExportContent", "essential": false }
+  ],
   "dataRoles": [
-    { "displayName": "Outcome/Numerator", "name": "numerators",   "kind": "Measure" },
-    { "displayName": "Denominator",       "name": "denominators", "kind": "Measure" },
-    { "displayName": "ID Key (Date)",     "name": "key",          "kind": "Grouping" },
-    { "displayName": "SD (for xbar)",     "name": "xbar_sds",     "kind": "Measure" },
-    { "displayName": "Tooltips",          "name": "tooltips",     "kind": "Measure" }
+    { "displayName": "Outcome/Numerator",     "name": "numerators",   "kind": "Measure" },
+    { "displayName": "Denominator",           "name": "denominators", "kind": "Measure" },
+    { "displayName": "ID Key (Date)",         "name": "key",          "kind": "Grouping" },
+    { "displayName": "Grouping (Summary Table)",         "name": "indicator",          "kind": "Grouping" },
+    { "displayName": "Rebaseline Groupings",  "name": "groupings",    "kind": "Measure" },
+    { "displayName": "SD (for xbar)",         "name": "xbar_sds",     "kind": "Measure" },
+    { "displayName": "Tooltips",              "name": "tooltips",     "kind": "Measure" }
   ],
   "objects": {
     "split_indexes_storage" : {
@@ -34,18 +39,20 @@
           "displayName": "Chart Type",
           "type" : {
             "enumeration" : [
-              { "displayName" : "run - Run Chart",                               "value" : "run" },
-              { "displayName" : "i - Individual Measurements",                   "value" : "i" },
-              { "displayName" : "mr - Moving Range of Individual Measurements",  "value" : "mr" },
-              { "displayName" : "p - Proportions",                               "value" : "p" },
-              { "displayName" : "p prime - Proportions: Large-Sample Corrected", "value" : "pp" },
-              { "displayName" : "u - Rates",                                     "value" : "u" },
-              { "displayName" : "u prime - Rates: Large-Sample Correction",      "value" : "up" },
-              { "displayName" : "c - Counts",                                    "value" : "c" },
-              { "displayName" : "xbar - Sample Means",                           "value" : "xbar" },
-              { "displayName" : "s - Sample SDs",                                "value" : "s" },
-              { "displayName" : "g - Number of Non-Events Between Events",       "value" : "g" },
-              { "displayName" : "t - Time Between Events",                       "value" : "t" }
+              { "displayName" : "run - Run Chart",                                   "value" : "run" },
+              { "displayName" : "i - Individual Measurements",                       "value" : "i" },
+              { "displayName" : "i_m - Individual Measurements: Median centerline",  "value" : "i_m" },
+              { "displayName" : "i_mm - Individual Measurements: Median centerline, Median MR Limits",  "value" : "i_mm" },
+              { "displayName" : "mr - Moving Range of Individual Measurements",       "value" : "mr" },
+              { "displayName" : "p - Proportions",                                    "value" : "p" },
+              { "displayName" : "p prime - Proportions: Large-Sample Corrected",      "value" : "pp" },
+              { "displayName" : "u - Rates",                                          "value" : "u" },
+              { "displayName" : "u prime - Rates: Large-Sample Correction",           "value" : "up" },
+              { "displayName" : "c - Counts",                                         "value" : "c" },
+              { "displayName" : "xbar - Sample Means",                                "value" : "xbar" },
+              { "displayName" : "s - Sample SDs",                                     "value" : "s" },
+              { "displayName" : "g - Number of Non-Events Between Events",            "value" : "g" },
+              { "displayName" : "t - Time Between Events",                            "value" : "t" }
             ]
           }
         },
@@ -83,14 +90,34 @@
           "displayName": "Truncate Upper Limits at:",
           "type": { "numeric": true }
         },
-        "alt_target": {
-          "displayName": "Additional Target Value:",
-          "type": { "numeric": true }
+        "ttip_show_numerator": {
+          "displayName": "Show Numerator in Tooltip",
+          "type" : { "bool" : true }
+        },
+        "ttip_label_numerator": {
+          "displayName": "Numerator Tooltip Label",
+          "type": { "text": true }
+        },
+        "ttip_show_denominator": {
+          "displayName": "Show Denominator in Tooltip",
+          "type" : { "bool" : true }
+        },
+        "ttip_label_denominator": {
+          "displayName": "Denominator Tooltip Label",
+          "type": { "text": true }
+        },
+        "ttip_show_value": {
+          "displayName": "Show Value in Tooltip",
+          "type" : { "bool" : true }
+        },
+        "ttip_label_value": {
+          "displayName": "Value Tooltip Label",
+          "type": { "text": true }
         }
       }
     },
     "outliers" : {
-      "displayName": "Outlier Highlighting",
+      "displayName": "Outlier Detection",
       "properties": {
         "process_flag_type": {
           "displayName": "Type of Change to Flag",
@@ -112,13 +139,20 @@
             ]
           }
         },
-        "flag_series": {
-          "displayName": "Highlight all in Pattern",
+        "astronomical": {
+          "displayName": "Highlight Astronomical Points",
           "type" : { "bool" : true }
         },
-        "astronomical": {
-          "displayName": "Astronomical Points",
-          "type" : { "bool" : true }
+        "astronomical_limit": {
+          "displayName": "Limit for Astronomical Points",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "1 Sigma", "value" : "1 Sigma" },
+              { "displayName" : "2 Sigma", "value" : "2 Sigma" },
+              { "displayName" : "3 Sigma", "value" : "3 Sigma" },
+              { "displayName" : "Specification", "value" : "Specification" }
+            ]
+          }
         },
         "ast_colour_improvement":{
           "displayName": "Imp. Ast. Colour",
@@ -137,7 +171,7 @@
           "type": { "fill": { "solid": { "color": true } } }
         },
         "shift": {
-          "displayName": "Shifts",
+          "displayName": "Highlight Shifts",
           "type" : { "bool" : true }
         },
         "shift_n": {
@@ -161,7 +195,7 @@
           "type": { "fill": { "solid": { "color": true } } }
         },
         "trend": {
-          "displayName": "Trends",
+          "displayName": "Highlight Trends",
           "type" : { "bool" : true }
         },
         "trend_n": {
@@ -185,8 +219,23 @@
           "type": { "fill": { "solid": { "color": true } } }
         },
         "two_in_three": {
-          "displayName": "Two-in-Three",
+          "displayName": "Highlight Two-in-Three",
           "type" : { "bool" : true }
+        },
+        "two_in_three_highlight_series": {
+          "displayName": "Highlight all in Pattern",
+          "type" : { "bool" : true }
+        },
+        "two_in_three_limit": {
+          "displayName": "Warning Limit for Two-in-Three",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "1 Sigma", "value" : "1 Sigma" },
+              { "displayName" : "2 Sigma", "value" : "2 Sigma" },
+              { "displayName" : "3 Sigma", "value" : "3 Sigma" },
+              { "displayName" : "Specification", "value" : "Specification" }
+            ]
+          }
         },
         "twointhree_colour_improvement":{
           "displayName": "Imp. Two-in-Three Colour",
@@ -213,7 +262,7 @@
           "displayName": "Show Variation Icons",
           "type" : { "bool" : true }
         },
-        "flag_variation_last": {
+        "flag_last_point": {
           "displayName": "Flag Only Last Point",
           "type" : { "bool" : true }
         },
@@ -256,6 +305,10 @@
     "canvas": {
       "displayName": "Canvas Settings",
       "properties": {
+        "show_errors": {
+          "displayName": "Show Errors on Canvas",
+          "type": { "bool": true }
+        },
         "lower_padding":{
           "displayName": "Padding Below Plot (pixels):",
           "type": { "numeric": true }
@@ -314,7 +367,7 @@
               { "displayName" : "DD",          "value" : "DD" },
               { "displayName" : "Thurs DD",    "value" : "Thurs DD" },
               { "displayName" : "Thursday DD", "value" : "Thursday DD"  },
-              { "displayName" : "(None)",    "value" : "DoNotShowDay" }
+              { "displayName" : "(blank)",    "value" : "(blank)" }
             ]
           }
         },
@@ -324,7 +377,8 @@
             "enumeration" : [
               { "displayName" : "MM",    "value" : "MM" },
               { "displayName" : "Mon",   "value" : "Mon" },
-              { "displayName" : "Month", "value" : "Month" }
+              { "displayName" : "Month", "value" : "Month" },
+              { "displayName" : "(blank)",    "value" : "(blank)" }
             ]
           }
         },
@@ -333,7 +387,8 @@
           "type": {
             "enumeration" : [
               { "displayName" : "YYYY", "value" : "YYYY" },
-              { "displayName" : "YY",   "value" : "YY" }
+              { "displayName" : "YY",   "value" : "YY" },
+              { "displayName" : "(blank)",    "value" : "(blank)" }
             ]
           }
         },
@@ -352,12 +407,44 @@
     "lines": {
       "displayName": "Line Settings",
       "properties": {
+        "show_99": {
+          "displayName": "Show 99.8% Lines",
+          "type" : { "bool" : true }
+        },
+        "show_95": {
+          "displayName": "Show 95% Lines",
+          "type" : { "bool" : true }
+        },
+        "show_68": {
+          "displayName": "Show 68% Lines",
+          "type" : { "bool" : true }
+        },
+        "show_main": {
+          "displayName": "Show Main Line",
+          "type" : { "bool" : true }
+        },
+        "show_target": {
+          "displayName": "Show Target Line",
+          "type" : { "bool" : true }
+        },
+        "show_alt_target": {
+          "displayName": "Show Alt. Target Line",
+          "type" : { "bool" : true }
+        },
+        "show_specification": {
+          "displayName": "Show Specification Lines",
+          "type" : { "bool" : true }
+        },
         "width_99": {
           "displayName": "99.8% Line Width",
           "type": { "numeric": true }
         },
         "width_95": {
           "displayName": "95% Line Width",
+          "type": { "numeric": true }
+        },
+        "width_68": {
+          "displayName": "68% Line Width",
           "type": { "numeric": true }
         },
         "width_main": {
@@ -372,6 +459,10 @@
           "displayName": "Alt. Target Line Width",
           "type": { "numeric": true }
         },
+        "width_specification": {
+          "displayName": "Specification Line Width",
+          "type": { "numeric": true }
+        },
         "type_99": {
           "displayName": "99.8% Line Type",
           "type": {
@@ -384,6 +475,16 @@
         },
         "type_95": {
           "displayName": "95% Line Type",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "Solid",  "value" : "10 0" },
+              { "displayName" : "Dashed", "value" : "10 10" },
+              { "displayName" : "Dotted", "value" : "2 5" }
+            ]
+          }
+        },
+        "type_68": {
+          "displayName": "68% Line Type",
           "type": {
             "enumeration" : [
               { "displayName" : "Solid",  "value" : "10 0" },
@@ -422,12 +523,26 @@
             ]
           }
         },
+        "type_specification": {
+          "displayName": "Specification Line Type",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "Solid",  "value" : "10 0" },
+              { "displayName" : "Dashed", "value" : "10 10" },
+              { "displayName" : "Dotted", "value" : "2 5" }
+            ]
+          }
+        },
         "colour_99":{
           "displayName": "99.8% Line Colour",
           "type": { "fill": { "solid": { "color": true } } }
         },
         "colour_95":{
           "displayName": "95% Line Colour",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "colour_68":{
+          "displayName": "68% Line Colour",
           "type": { "fill": { "solid": { "color": true } } }
         },
         "colour_main":{
@@ -441,6 +556,78 @@
         "colour_alt_target":{
           "displayName": "Alt. Target Line Colour",
           "type": { "fill": { "solid": { "color": true } } }
+        },
+        "colour_specification":{
+          "displayName": "Specification Line Colour",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "ttip_show_99": {
+          "displayName": "Show value in tooltip",
+          "type" : { "bool" : true }
+        },
+        "ttip_show_95": {
+          "displayName": "Show value in tooltip",
+          "type" : { "bool" : true }
+        },
+        "ttip_show_68": {
+          "displayName": "Show value in tooltip",
+          "type" : { "bool" : true }
+        },
+        "ttip_show_target": {
+          "displayName": "Show value in tooltip",
+          "type" : { "bool" : true }
+        },
+        "ttip_show_alt_target": {
+          "displayName": "Show value in tooltip",
+          "type" : { "bool" : true }
+        },
+        "ttip_show_specification": {
+          "displayName": "Show value in tooltip",
+          "type" : { "bool" : true }
+        },
+        "ttip_label_99": {
+          "displayName": "Tooltip Label",
+          "type": { "text": true }
+        },
+        "ttip_label_95": {
+          "displayName": "Tooltip Label",
+          "type": { "text": true }
+        },
+        "ttip_label_68": {
+          "displayName": "Tooltip Label",
+          "type": { "text": true }
+        },
+        "ttip_label_target": {
+          "displayName": "Tooltip Label",
+          "type": { "text": true }
+        },
+        "ttip_label_alt_target": {
+          "displayName": "Tooltip Label",
+          "type": { "text": true }
+        },
+        "ttip_label_specification": {
+          "displayName": "Tooltip Label",
+          "type": { "text": true }
+        },
+        "alt_target": {
+          "displayName": "Additional Target Value:",
+          "type": { "numeric": true }
+        },
+        "specification_upper": {
+          "displayName": "Upper Specification Limit:",
+          "type": { "numeric": true }
+        },
+        "specification_lower": {
+          "displayName": "Lower Specification Limit:",
+          "type": { "numeric": true }
+        },
+        "multiplier_alt_target": {
+          "displayName": "Apply Multiplier to Alt. Target",
+          "type" : { "bool" : true }
+        },
+        "multiplier_specification": {
+          "displayName": "Apply Multiplier to Specification Limits",
+          "type" : { "bool" : true }
         }
       }
     },
@@ -565,6 +752,231 @@
           "type": { "numeric": true }
         }
       }
+    },
+    "summary_table": {
+      "displayName": "Summary Table",
+      "properties": {
+        "show_table": {
+          "displayName": "Show Summary Table",
+          "type" : { "bool" : true }
+        },
+        "table_opacity": {
+          "displayName": "Opacity",
+          "type": { "numeric": true }
+        },
+        "table_opacity_unselected": {
+          "displayName": "Opacity if Unselected",
+          "type": { "numeric": true }
+        },
+        "table_text_overflow": {
+          "displayName": "Text Overflow Handling",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "Ellipsis", "value" : "ellipsis" },
+              { "displayName" : "Truncate",     "value" : "clip" },
+              { "displayName" : "None",     "value" : "none" }
+            ]
+          }
+        },
+        "table_outer_border_colour":{
+          "displayName": "Outer Border Colour",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "table_outer_border_width": {
+          "displayName": "Outer Border Width",
+          "type": { "numeric": true }
+        },
+        "table_outer_border_style": {
+          "displayName": "Outer Border Style",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "Solid",  "value" : "solid" },
+              { "displayName" : "Dashed", "value" : "dashed" },
+              { "displayName" : "Dotted", "value" : "dotted" },
+              { "displayName" : "Double", "value" : "double" },
+              { "displayName" : "Groove", "value" : "groove" },
+              { "displayName" : "Ridge",  "value" : "ridge" },
+              { "displayName" : "Inset",  "value" : "inset" },
+              { "displayName" : "Outset", "value" : "outset" }
+            ]
+          }
+        },
+        "table_outer_border_top": {
+          "displayName": "Outer Border Top",
+          "type": { "bool": true }
+        },
+        "table_outer_border_bottom": {
+          "displayName": "Outer Border Bottom",
+          "type": { "bool": true }
+        },
+        "table_outer_border_left": {
+          "displayName": "Outer Border Left",
+          "type": { "bool": true }
+        },
+        "table_outer_border_right": {
+          "displayName": "Outer Border Right",
+          "type": { "bool": true }
+        },
+        "table_header_font": {
+          "displayName": "Header Font",
+          "type": { "formatting": { "fontFamily": true } }
+        },
+        "table_header_size": {
+          "displayName": "Header Font Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "table_header_colour":{
+          "displayName": "Header Font Colour",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "table_header_bg_colour":{
+          "displayName": "Header Background Colour",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "table_header_font_weight": {
+          "displayName": "Header Font Weight",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "Normal", "value" : "normal" },
+              { "displayName" : "Bold",   "value" : "bold" }
+            ]
+          }
+        },
+        "table_header_text_transform": {
+          "displayName": "Header Text Transform",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "Uppercase",   "value" : "uppercase" },
+              { "displayName" : "Lowercase",   "value" : "lowercase" },
+              { "displayName" : "Capitalise",  "value" : "capitalize" },
+              { "displayName" : "None",        "value" : "none" }
+            ]
+          }
+        },
+        "table_header_text_align": {
+          "displayName": "Text Alignment",
+          "type": { "formatting": { "alignment": true } }
+        },
+        "table_header_text_padding": {
+          "displayName": "Padding Around Text",
+          "type": { "numeric": true }
+        },
+        "table_header_border_colour":{
+          "displayName": "Header Border Colour",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "table_header_border_width": {
+          "displayName": "Header Border Width",
+          "type": { "numeric": true }
+        },
+        "table_header_border_style": {
+          "displayName": "Header Border Style",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "Solid",  "value" : "solid" },
+              { "displayName" : "Dashed", "value" : "dashed" },
+              { "displayName" : "Dotted", "value" : "dotted" },
+              { "displayName" : "Double", "value" : "double" },
+              { "displayName" : "Groove", "value" : "groove" },
+              { "displayName" : "Ridge",  "value" : "ridge" },
+              { "displayName" : "Inset",  "value" : "inset" },
+              { "displayName" : "Outset", "value" : "outset" }
+            ]
+          }
+        },
+        "table_header_border_bottom": {
+          "displayName": "Bottom Border",
+          "type": { "bool": true }
+        },
+        "table_header_border_inner": {
+          "displayName": "Inner Borders",
+          "type": { "bool": true }
+        },
+        "table_body_font": {
+          "displayName": "Body Font",
+          "type": { "formatting": { "fontFamily": true } }
+        },
+        "table_body_size": {
+          "displayName": "Body Font Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "table_body_colour":{
+          "displayName": "Body Font Colour",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "table_body_bg_colour":{
+          "displayName": "Body Background Colour",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "table_body_font_weight": {
+          "displayName": "Font Weight",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "Normal", "value" : "normal" },
+              { "displayName" : "Bold",   "value" : "bold" }
+            ]
+          }
+        },
+        "table_body_text_transform": {
+          "displayName": "Text Transform",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "Uppercase",   "value" : "uppercase" },
+              { "displayName" : "Lowercase",   "value" : "lowercase" },
+              { "displayName" : "Capitalise",  "value" : "capitalize" },
+              { "displayName" : "None",        "value" : "none" }
+            ]
+          }
+        },
+        "table_body_text_align": {
+          "displayName": "Text Alignment",
+          "type": { "formatting": { "alignment": true } }
+        },
+        "table_body_text_padding": {
+          "displayName": "Padding Around Text",
+          "type": { "numeric": true }
+        },
+        "table_body_border_colour":{
+          "displayName": "Body Border Colour",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "table_body_border_width": {
+          "displayName": "Body Border Width",
+          "type": { "numeric": true }
+        },
+        "table_body_border_style": {
+          "displayName": "Body Border Style",
+          "type": {
+            "enumeration" : [
+              { "displayName" : "Solid",  "value" : "solid" },
+              { "displayName" : "Dashed", "value" : "dashed" },
+              { "displayName" : "Dotted", "value" : "dotted" },
+              { "displayName" : "Double", "value" : "double" },
+              { "displayName" : "Groove", "value" : "groove" },
+              { "displayName" : "Ridge",  "value" : "ridge" },
+              { "displayName" : "Inset",  "value" : "inset" },
+              { "displayName" : "Outset", "value" : "outset" }
+            ]
+          }
+        },
+        "table_body_border_top_bottom": {
+          "displayName": "Top/Bottom Borders",
+          "type": { "bool": true }
+        },
+        "table_body_border_left_right": {
+          "displayName": "Left/Right Borders",
+          "type": { "bool": true }
+        }
+      }
+    },
+    "download_options" : {
+      "displayName" : "Download Options",
+      "properties": {
+        "show_button": {
+          "displayName": "Show Download Button",
+          "type" : { "bool" : true }
+        }
+      }
     }
   },
   "dataViewMappings": [{
@@ -576,13 +988,17 @@
     }],
     "categorical": {
       "categories": {
-        "for": { "in": "key" },
+        "select": [
+          { "for": { "in": "key" } },
+          { "for": { "in": "indicator" } }
+        ],
         "dataReductionAlgorithm": { "window": { "count": 30000 } }
       },
       "values": {
         "select": [
           { "bind": { "to": "numerators" } },
           { "bind": { "to": "denominators" } },
+          { "bind": { "to": "groupings" } },
           { "bind": { "to": "xbar_sds" } },
           { "bind": { "to": "tooltips" } }
         ]

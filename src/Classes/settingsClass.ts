@@ -1,18 +1,24 @@
 import * as powerbi from "powerbi-visuals-api"
 type DataView = powerbi.default.DataView;
-type DataViewCategorical = powerbi.default.DataViewCategorical;
 type DataViewPropertyValue = powerbi.default.DataViewPropertyValue
 type VisualObjectInstanceEnumerationObject = powerbi.default.VisualObjectInstanceEnumerationObject;
 type VisualObjectInstance = powerbi.default.VisualObjectInstance;
 type VisualObjectInstanceContainer = powerbi.default.VisualObjectInstanceContainer;
-import { dataViewWildcard } from "powerbi-visuals-utils-dataviewutils";
-import { extractConditionalFormatting } from "../Functions";
-import { default as defaultSettings, settingsPaneGroupings } from "../defaultSettings";
+import { extractConditionalFormatting, isNullOrUndefined } from "../Functions";
+import { default as defaultSettings, type defaultSettingsType, settingsPaneGroupings,
+  type defaultSettingsKeys, type defaultSettingsNestedKeys, type NestedKeysOf
+ } from "../defaultSettings";
 import derivedSettingsClass from "./derivedSettingsClass";
+import { type ConditionalReturnT, type SettingsValidationT } from "../Functions/extractConditionalFormatting";
 
-export type defaultSettingsType = typeof defaultSettings;
-export type defaultSettingsKey = keyof defaultSettingsType;
+export { type defaultSettingsType, type defaultSettingsKeys };
 export type settingsScalarTypes = number | string | boolean;
+
+export type optionalSettingsTypes = Partial<{
+  [K in keyof typeof defaultSettings]: Partial<defaultSettingsType[K]>;
+}>;
+
+export type paneGroupingsNestedKey = "all" | NestedKeysOf<typeof settingsPaneGroupings[keyof typeof settingsPaneGroupings]>;
 
 /**
  * This is the core class which controls the initialisation and
@@ -23,7 +29,10 @@ export type settingsScalarTypes = number | string | boolean;
  */
 export default class settingsClass {
   settings: defaultSettingsType;
-  derivedSettings: derivedSettingsClass
+  derivedSettings: derivedSettingsClass;
+  validationStatus: SettingsValidationT;
+  settingsGrouped: defaultSettingsType[];
+  derivedSettingsGrouped: derivedSettingsClass[];
 
   /**
    * Function to read the values from the settings pane and update the
@@ -31,22 +40,105 @@ export default class settingsClass {
    *
    * @param inputObjects
    */
-  update(inputView: DataView): void {
+  update(inputView: DataView, groupIdxs: number[][]): void {
+    this.validationStatus
+      = JSON.parse(JSON.stringify({ status: 0, messages: new Array<string[]>(), error: "" }));
     // Get the names of all classes in settingsObject which have values to be updated
     const allSettingGroups: string[] = Object.keys(this.settings);
 
-    allSettingGroups.forEach(settingGroup => {
-      const categoricalView: DataViewCategorical = inputView.categorical ? inputView.categorical : null;
-      const condFormatting: defaultSettingsType[defaultSettingsKey] = extractConditionalFormatting(categoricalView, settingGroup, this.settings)[0];
+    const is_grouped: boolean = inputView.categorical?.categories?.some(d => d.source.roles.indicator);
+    this.settingsGrouped = new Array<defaultSettingsType>();
+    if (is_grouped) {
+      groupIdxs.forEach(() => {
+        this.settingsGrouped.push(Object.fromEntries(Object.keys(defaultSettings).map((settingGroupName) => {
+          return [settingGroupName, Object.fromEntries(Object.keys(defaultSettings[settingGroupName]).map((settingName) => {
+            return [settingName, defaultSettings[settingGroupName][settingName]];
+          }))];
+        })) as defaultSettingsType);
+      })
+    }
+
+    allSettingGroups.forEach((settingGroup: defaultSettingsKeys) => {
+      const condFormatting: ConditionalReturnT<defaultSettingsType[defaultSettingsKeys]>
+        = extractConditionalFormatting(inputView?.categorical, settingGroup, this.settings);
+
+      if (condFormatting.validation.status !== 0) {
+        this.validationStatus.status = condFormatting.validation.status;
+        this.validationStatus.error = condFormatting.validation.error;
+      }
+
+      if (this.validationStatus.messages.length === 0) {
+        this.validationStatus.messages = condFormatting.validation.messages;
+      } else if (!condFormatting.validation.messages.every(d => d.length === 0)) {
+        condFormatting.validation.messages.forEach((message, idx) => {
+          if (message.length > 0) {
+            this.validationStatus.messages[idx] = this.validationStatus.messages[idx].concat(message)
+          }
+        });
+      }
+
       // Get the names of all settings in a given class and
       // use those to extract and update the relevant values
       const settingNames: string[] = Object.keys(this.settings[settingGroup]);
-      settingNames.forEach(settingName => {
-        this.settings[settingGroup][settingName] = condFormatting ? condFormatting[settingName] : defaultSettings[settingGroup][settingName]
+      settingNames.forEach((settingName: defaultSettingsNestedKeys) => {
+        this.settings[settingGroup][settingName]
+          = condFormatting?.values
+            ? condFormatting?.values[0][settingName]
+            : defaultSettings[settingGroup][settingName]["default"]
+
+        if (is_grouped) {
+          groupIdxs.forEach((idx, idx_idx) => {
+            this.settingsGrouped[idx_idx][settingGroup][settingName]
+              = condFormatting?.values
+                ? condFormatting?.values[idx[0]][settingName]
+                : defaultSettings[settingGroup][settingName]["default"]
+          })
+        }
       })
     })
 
-    this.derivedSettings.update(this.settings)
+    if (this.settings.nhs_icons.show_variation_icons) {
+      const patterns: string[] = ["astronomical", "shift", "trend", "two_in_three"];
+      const anyOutlierPatterns: boolean = patterns.some(d => this.settings.outliers[d]);
+      if (!anyOutlierPatterns) {
+        this.validationStatus.status = 1;
+        this.validationStatus.error = "Variation icons require at least one outlier pattern to be selected";
+      }
+    }
+
+    if (this.settings.nhs_icons.show_assurance_icons) {
+      const altTargetPresent: boolean = !isNullOrUndefined(this.settings.lines.alt_target);
+      const improvementDirection: string = this.settings.outliers.improvement_direction;
+      if (!altTargetPresent || improvementDirection === "neutral") {
+        this.validationStatus.status = 1;
+        this.validationStatus.error = "Assurance icons require an alternative target and a non-neutral improvement direction";
+      }
+    }
+
+    this.derivedSettings.update(this.settings.spc)
+    this.derivedSettingsGrouped = new Array<derivedSettingsClass>();
+    if (is_grouped) {
+      this.settingsGrouped.forEach((d) => {
+        const newDerived = new derivedSettingsClass();
+        newDerived.update(d.spc);
+        this.derivedSettingsGrouped.push(newDerived);
+      })
+    }
+  }
+
+  /**
+   * Get the names of all settings in a given group, and remove any which are toggled off.
+   *
+   * @param settingGroupName
+   * @returns
+   */
+  getSettingNames(settingGroupName: defaultSettingsKeys): Record<paneGroupingsNestedKey, defaultSettingsNestedKeys[]> {
+    const settingsGrouped: boolean = Object.keys(settingsPaneGroupings)
+                                           .includes(settingGroupName);
+
+    return settingsGrouped
+        ? JSON.parse(JSON.stringify(settingsPaneGroupings[settingGroupName]))
+        : { "all": Object.keys(this.settings[settingGroupName]) };
   }
 
   /**
@@ -57,14 +149,14 @@ export default class settingsClass {
    * @param inputData
    * @returns An object where each element is the value for a given setting in the named group
    */
-  createSettingsEntry(settingGroupName: string): VisualObjectInstanceEnumerationObject {
-    const settingNames: string[] = Object.keys(this.settings[settingGroupName]);
-    const settingsGrouped: boolean = Object.keys(settingsPaneGroupings).includes(settingGroupName);
-    const paneGroupings: Record<string, string[]> = settingsGrouped ? settingsPaneGroupings[settingGroupName] : { "all": settingNames };
+  createSettingsEntry(settingGroupName: defaultSettingsKeys): VisualObjectInstanceEnumerationObject {
+    const paneGroupings: Record<paneGroupingsNestedKey, defaultSettingsNestedKeys[]>
+      = this.getSettingNames(settingGroupName);
+
     const rtnInstances = new Array<VisualObjectInstance>();
     const rtnContainers = new Array<VisualObjectInstanceContainer>();
 
-    Object.keys(paneGroupings).forEach((currKey, idx) => {
+    Object.keys(paneGroupings).forEach((currKey: paneGroupingsNestedKey, idx) => {
       const props = Object.fromEntries(
         paneGroupings[currKey].map(currSetting => {
           const settingValue: DataViewPropertyValue = this.settings[settingGroupName][currSetting]
@@ -85,7 +177,10 @@ export default class settingsClass {
         objectName: settingGroupName,
         properties: props,
         propertyInstanceKind: Object.fromEntries(propertyKinds),
-        selector: dataViewWildcard.createDataViewWildcardSelector(dataViewWildcard.DataViewWildcardMatchingOption.InstancesAndTotals)
+        selector: { data: [{ dataViewWildcard: { matchingOption: 0 } }] },
+        validValues: Object.fromEntries(Object.keys(defaultSettings[settingGroupName]).map((settingName: defaultSettingsNestedKeys) => {
+          return [settingName, defaultSettings[settingGroupName][settingName]?.["valid"]]
+        }))
       })
 
       if (currKey !== "all") {
@@ -98,7 +193,11 @@ export default class settingsClass {
   }
 
   constructor() {
-    this.settings = JSON.parse(JSON.stringify(defaultSettings));
+    this.settings = Object.fromEntries(Object.keys(defaultSettings).map((settingGroupName) => {
+      return [settingGroupName, Object.fromEntries(Object.keys(defaultSettings[settingGroupName]).map((settingName) => {
+        return [settingName, defaultSettings[settingGroupName][settingName]];
+      }))];
+    })) as defaultSettingsType;
     this.derivedSettings = new derivedSettingsClass();
   }
 }

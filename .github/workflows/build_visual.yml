@@ -3,6 +3,8 @@ name: Test Build PowerBI visual
 on:
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - PowerBI-SPC-Docs/** # Don't run on docs folder
 
 jobs:
   build:
@@ -13,22 +15,33 @@ jobs:
         node-version: [20.x]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
 
     - name: Install Dependencies
       run: |
         npm install
-        npm install -g powerbi-visuals-tools@5.1.1
+        npm install -g powerbi-visuals-tools
 
     - name: Run linter
       run: |
         npm run eslint
 
+    - name: Run unit tests
+      run: |
+        npm run test
+
     - name: Test if package can be built
       run: |
         pbiviz package
+
+    - name: Attach built visual
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: powerbi-visual-${{ github.sha }}
+        path: dist/*.pbiviz

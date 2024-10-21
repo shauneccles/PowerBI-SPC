@@ -1,6 +1,6 @@
 import * as d3 from "./D3 Modules";
 import type { lineData } from "../Classes";
-import { between, getAesthetic } from "../Functions";
+import { between, getAesthetic, isNullOrUndefined } from "../Functions";
 import type { svgBaseType, Visual } from "../visual";
 
 export default function drawLines(selection: svgBaseType, visualObj: Visual) {
@@ -18,13 +18,17 @@ export default function drawLines(selection: svgBaseType, visualObj: Visual) {
                   .x(d => visualObj.viewModel.plotProperties.xScale(d.x))
                   .y(d => visualObj.viewModel.plotProperties.yScale(d.line_value))
                   .defined(d => {
-                    return d.line_value !== null
+                    return !isNullOrUndefined(d.line_value)
                       && between(d.line_value, ylower, yupper)
                       && between(d.x, xlower, xupper)
                   })(d[1])
       })
       .attr("fill", "none")
-      .attr("stroke", d => getAesthetic(d[0], "lines", "colour", visualObj.viewModel.inputSettings.settings))
+      .attr("stroke", d => {
+        return visualObj.viewModel.colourPalette.isHighContrast
+                ? visualObj.viewModel.colourPalette.foregroundColour
+                : getAesthetic(d[0], "lines", "colour", visualObj.viewModel.inputSettings.settings)
+      })
       .attr("stroke-width", d => getAesthetic(d[0], "lines", "width", visualObj.viewModel.inputSettings.settings))
       .attr("stroke-dasharray", d => getAesthetic(d[0], "lines", "type", visualObj.viewModel.inputSettings.settings));
 }

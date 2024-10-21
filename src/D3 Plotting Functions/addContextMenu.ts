@@ -1,9 +1,11 @@
 import * as d3 from "./D3 Modules";
 import type { plotData } from "../Classes";
-import type { svgBaseType, Visual } from "../visual";
+import type { divBaseType, svgBaseType, Visual } from "../visual";
 
-export default function addContextMenu(selection: svgBaseType, visualObj: Visual) {
-  if (!(visualObj.viewModel.plotProperties.displayPlot)) {
+export default function addContextMenu(selection: svgBaseType | divBaseType, visualObj: Visual) {
+  if (!(visualObj.viewModel.plotProperties.displayPlot
+        || visualObj.viewModel.inputSettings.settings.summary_table.show_table
+        || visualObj.viewModel.showGrouped)) {
     selection.on("contextmenu", () => { return; });
     return;
   }

@@ -1,7 +1,6 @@
 import type { plotData } from "../Classes";
-import { between } from "../Functions";
+import { between, isNullOrUndefined } from "../Functions";
 import type { svgBaseType, Visual } from "../visual";
-import updateHighlighting from "./updateHighlighting";
 
 export default function drawDots(selection: svgBaseType, visualObj: Visual) {
   selection
@@ -9,7 +8,7 @@ export default function drawDots(selection: svgBaseType, visualObj: Visual) {
       .selectAll("circle")
       .data(visualObj.viewModel.plotPoints)
       .join("circle")
-      .filter((d: plotData) => d.value !== null)
+      .filter((d: plotData) => !isNullOrUndefined(d.value))
       .attr("cy", (d: plotData) => visualObj.viewModel.plotProperties.yScale(d.value))
       .attr("cx", (d: plotData) => visualObj.viewModel.plotProperties.xScale(d.x))
       .attr("r", (d: plotData) => d.aesthetics.size)
@@ -21,6 +20,7 @@ export default function drawDots(selection: svgBaseType, visualObj: Visual) {
         return (between(d.value, ylower, yupper) && between(d.x, xlower, xupper)) ? d.aesthetics.colour : "#FFFFFF";
       })
       .on("click", (event, d: plotData) => {
+        if (visualObj.host.hostCapabilities.allowInteractions) {
           if (visualObj.viewModel.inputSettings.settings.spc.split_on_click) {
             // Identify whether limits are already split at datapoint, and undo if so
             const xIndex: number = visualObj.viewModel.splitIndexes.indexOf(d.x)
@@ -46,34 +46,37 @@ export default function drawDots(selection: svgBaseType, visualObj: Visual) {
                 //   PowerBI based on all selected dots
                 .select(d.identity, (event.ctrlKey || event.metaKey))
                 // Change opacity of non-selected dots
-                .then(() => { selection.call(updateHighlighting, visualObj); });
+                .then(() => {
+                  visualObj.updateHighlighting();
+                });
           }
           event.stopPropagation();
-        })
-        // Display tooltip content on mouseover
-        .on("mouseover", (event, d: plotData) => {
-          // Get screen coordinates of mouse pointer, tooltip will
-          //   be displayed at these coordinates
-          const x = event.pageX;
-          const y = event.pageY;
+        }
+      })
+      // Display tooltip content on mouseover
+      .on("mouseover", (event, d: plotData) => {
+        // Get screen coordinates of mouse pointer, tooltip will
+        //   be displayed at these coordinates
+        const x = event.pageX;
+        const y = event.pageY;
 
-          visualObj.host.tooltipService.show({
-            dataItems: d.tooltip,
-            identities: [d.identity],
-            coordinates: [x, y],
-            isTouchEvent: false
-          });
-        })
-        // Hide tooltip when mouse moves out of dot
-        .on("mouseout", () => {
-          visualObj.host.tooltipService.hide({
-            immediately: true,
-            isTouchEvent: false
-          })
+        visualObj.host.tooltipService.show({
+          dataItems: d.tooltip,
+          identities: [d.identity],
+          coordinates: [x, y],
+          isTouchEvent: false
         });
+      })
+      // Hide tooltip when mouse moves out of dot
+      .on("mouseout", () => {
+        visualObj.host.tooltipService.hide({
+          immediately: true,
+          isTouchEvent: false
+        })
+      });
 
     selection.on('click', () => {
       visualObj.selectionManager.clear();
-      selection.call(updateHighlighting, visualObj);
+      visualObj.updateHighlighting();
     });
 }

@@ -1,59 +1,129 @@
-import rep from "./rep";
-import { validationErrorClass } from "../Classes";
+import { derivedSettingsClass } from "../Classes";
+import isNullOrUndefined from "./isNullOrUndefined";
 
-export default function validateInputData(keys: string[], numerators: number[], denominators: number[], xbar_sds: number[], data_type: string): string[] {
-  const denominatorConstraintRequired: string[] = ["p", "pp", "u", "up"];
-  const denominatorRequired: string[] = ["p", "pp", "u", "up", "xbar", "s"];
-  const denominatorOptional: string[] = ["i", "run", "mr"];
+export type ValidationT = { status: number, messages: string[], error?: string };
 
-  const checkOptionalDenominator: boolean = denominatorOptional.includes(data_type) && !(denominators === null || denominators === undefined);
-  if (checkOptionalDenominator) {
-    denominatorRequired.push(data_type);
-  }
-  const numeratorNonNegativeRequired: string[] = ["p", "pp", "u", "up", "s", "c", "g", "t"];
-  const status: string[] = rep("", keys.length);
-  keys.forEach((d, idx) => status[idx] = status[idx] === "" ? ((d != null) ? "" : "Date missing") : status[idx]);
-  if (!status.some(d => d == "")) {
-    throw(new validationErrorClass("All dates/IDs are missing or null!"))
-  }
+const enum ValidationFailTypes {
+  Valid = 0,
+  GroupingMissing = 1,
+  DateMissing = 2,
+  NumeratorMissing = 3,
+  NumeratorNegative = 4,
+  DenominatorMissing = 5,
+  DenominatorNegative = 6,
+  DenominatorLessThanNumerator = 7,
+  SDMissing = 8,
+  SDNegative = 9
+}
 
-  numerators.forEach((d, idx) => status[idx] = status[idx] === "" ? ((d != null) ? "" : "Numerator missing") : status[idx]);
-  if (!status.some(d => d == "")) {
-    throw(new validationErrorClass("All numerators are missing or null!"))
-  }
-  if (numeratorNonNegativeRequired.includes(data_type)) {
-    numerators.forEach((d, idx) => status[idx] = status[idx] === "" ? ((d >= 0) ? "" : "Numerator negative") : status[idx]);
-    if (!status.some(d => d == "")) {
-      throw(new validationErrorClass("All numerators are negative!"))
+function validateInputDataImpl(key: string,
+                              numerator: number,
+                              denominator: number,
+                              xbar_sd: number,
+                              chart_type_props: derivedSettingsClass["chart_type_props"],
+                              check_denom: boolean): { message: string, type: ValidationFailTypes }  {
+
+  const rtn = { message: "", type: ValidationFailTypes.Valid };
+  if (isNullOrUndefined(key)) {
+    rtn.message = "Date missing";
+    rtn.type = ValidationFailTypes.DateMissing;
+  } else if (isNullOrUndefined(numerator)) {
+    rtn.message = "Numerator missing";
+    rtn.type = ValidationFailTypes.NumeratorMissing;
+  } else if (chart_type_props.numerator_non_negative && numerator < 0) {
+    rtn.message = "Numerator negative";
+    rtn.type = ValidationFailTypes.NumeratorNegative;
+  } else if (check_denom) {
+    if (isNullOrUndefined(denominator)) {
+      rtn.message = "Denominator missing";
+      rtn.type = ValidationFailTypes.DenominatorMissing;
+    } else if (denominator < 0) {
+      rtn.message = "Denominator negative";
+      rtn.type = ValidationFailTypes.DenominatorNegative;
+    } else if (chart_type_props.numerator_leq_denominator && denominator < numerator) {
+      rtn.message = "Denominator < numerator";
+      rtn.type = ValidationFailTypes.DenominatorLessThanNumerator;
+    }
+  } else if (chart_type_props.needs_sd) {
+    if (isNullOrUndefined(xbar_sd)) {
+      rtn.message = "SD missing";
+      rtn.type = ValidationFailTypes.SDMissing;
+    } else if (xbar_sd < 0) {
+      rtn.message = "SD negative";
+      rtn.type = ValidationFailTypes.SDNegative;
     }
   }
+  return rtn;
+}
 
-  if (denominatorRequired.includes(data_type)) {
-    denominators.forEach((d, idx) => status[idx] = status[idx] === "" ? ((d != null) ? "" : "Denominator missing") : status[idx]);
-    if (!status.some(d => d == "")) {
-      throw(new validationErrorClass("All denominators missing or null!"))
-    }
-    denominators.forEach((d, idx) => status[idx] = status[idx] === "" ? ((d >= 0) ? "" : "Denominator negative") : status[idx]);
-    if (!status.some(d => d == "")) {
-      throw(new validationErrorClass("All denominators are negative!"))
-    }
-    if (denominatorConstraintRequired.includes(data_type)) {
-      denominators.forEach((d, idx) => status[idx] = status[idx] === "" ? ((d >= numerators[idx]) ? "" : "Denominator < numerator") : status[idx]);
-      if (!status.some(d => d == "")) {
-        throw(new validationErrorClass("All denominators are smaller than numerators!"))
+// ESLint errors due to number of lines in function, but would reduce readability to separate further
+/* eslint-disable */
+export default function validateInputData(keys: string[],
+                                          numerators: number[],
+                                          denominators: number[],
+                                          xbar_sds: number[],
+                                          chart_type_props: derivedSettingsClass["chart_type_props"],
+                                          idxs: number[]): { status: number, messages: string[], error?: string } {
+  let allSameType: boolean = false;
+  let messages: string[] = new Array<string>();
+  let all_status: ValidationFailTypes[] = new Array<ValidationFailTypes>();
+  const check_denom = chart_type_props.needs_denominator
+                      || (chart_type_props.denominator_optional && !isNullOrUndefined(denominators));
+  for (const i of idxs) {
+    const validation = validateInputDataImpl(keys[i], numerators?.[i], denominators?.[i], xbar_sds?.[i], chart_type_props,  check_denom);
+    messages.push(validation.message);
+    all_status.push(validation.type);
+  }
+
+  let allSameTypeSet = new Set(all_status);
+  allSameType = allSameTypeSet.size === 1;
+  let commonType = Array.from(allSameTypeSet)[0];
+
+  let validationRtn: ValidationT = {
+    status: (allSameType && commonType !== ValidationFailTypes.Valid) ? 1 : 0,
+    messages: messages
+  };
+
+  if (allSameType && commonType !== ValidationFailTypes.Valid) {
+    switch(commonType) {
+      case ValidationFailTypes.GroupingMissing: {
+        validationRtn.error = "Grouping missing"
+        break;
+      }
+      case ValidationFailTypes.DateMissing: {
+        validationRtn.error = "All dates/IDs are missing or null!"
+        break;
+      }
+      case ValidationFailTypes.NumeratorMissing: {
+        validationRtn.error = "All numerators are missing or null!"
+        break;
+      }
+      case ValidationFailTypes.NumeratorNegative: {
+        validationRtn.error = "All numerators are negative!"
+        break;
+      }
+      case ValidationFailTypes.DenominatorMissing: {
+        validationRtn.error = "All denominators missing or null!"
+        break;
+      }
+      case ValidationFailTypes.DenominatorNegative: {
+        validationRtn.error = "All denominators are negative!"
+        break;
+      }
+      case ValidationFailTypes.DenominatorLessThanNumerator: {
+        validationRtn.error = "All denominators are smaller than numerators!";
+        break;
+      }
+      case ValidationFailTypes.SDMissing: {
+        validationRtn.error = "All SDs missing or null!";
+        break;
+      }
+      case ValidationFailTypes.SDNegative: {
+        validationRtn.error = "All SDs are negative!";
+        break;
       }
     }
   }
-
-  if (data_type === "xbar") {
-    xbar_sds.forEach((d, idx) => status[idx] = status[idx] === "" ? ((d != null) ? "" : "SD missing") : status[idx]);
-    if (!status.some(d => d == "")) {
-      throw(new validationErrorClass("All SDs missing or null!"))
-    }
-    xbar_sds.forEach((d, idx) => status[idx] = status[idx] === "" ? ((d >=0) ? "" : "SD negative") : status[idx]);
-    if (!status.some(d => d == "")) {
-      throw(new validationErrorClass("All SDs are negative!"))
-    }
-  }
-  return status;
+  return validationRtn;
 }
+/* eslint-enable */
