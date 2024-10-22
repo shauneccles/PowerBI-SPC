@@ -56,4 +56,28 @@ export default function drawTooltipLine(selection: svgBaseType, visualObj: Visua
     xAxisLine.style("stroke-opacity", 0);
     yAxisLine.style("stroke-opacity", 0);
   });
+
+  // Add data labels for mean and process limits
+  const dataLabels = visualObj.viewModel.plotProperties.dataLabels;
+  selection
+      .select(".linesgroup")
+      .selectAll("text.mean-label")
+      .data(dataLabels.mean)
+      .join("text")
+      .attr("class", "mean-label")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y)
+      .attr("dx", 5)
+      .text(d => d.value.toFixed(2));
+
+  selection
+      .select(".linesgroup")
+      .selectAll("text.process-limit-label")
+      .data(dataLabels.processLimits)
+      .join("text")
+      .attr("class", "process-limit-label")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y)
+      .attr("dx", 5)
+      .text(d => d.value.toFixed(2));
 }

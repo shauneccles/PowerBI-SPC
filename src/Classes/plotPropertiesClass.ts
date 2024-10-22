@@ -29,6 +29,10 @@ export default class plotPropertiesClass {
   yAxis: axisProperties;
   xScale: d3.ScaleLinear<number, number, never>;
   yScale: d3.ScaleLinear<number, number, never>;
+  dataLabels: {
+    mean: { x: number, y: number, value: number }[],
+    processLimits: { x: number, y: number, value: number }[]
+  };
 
   // Separate function so that the axis can be re-calculated on changes to padding
   initialiseScale(svgWidth: number, svgHeight: number): void {
@@ -149,5 +153,19 @@ export default class plotPropertiesClass {
     };
 
     this.initialiseScale(options.viewport.width, options.viewport.height);
+
+    // Update data labels for mean and process limits
+    this.dataLabels = {
+      mean: controlLimits.keys.map((d, i) => ({
+        x: this.xScale(d.x) + 5,
+        y: this.yScale(controlLimits.values[i]),
+        value: controlLimits.values[i]
+      })),
+      processLimits: controlLimits.keys.map((d, i) => ({
+        x: this.xScale(d.x) + 5,
+        y: this.yScale(controlLimits.ul99[i]),
+        value: controlLimits.ul99[i]
+      }))
+    };
   }
 }
