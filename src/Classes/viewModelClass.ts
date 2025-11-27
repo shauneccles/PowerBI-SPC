@@ -525,191 +525,269 @@ export default class viewModelClass {
   }
 
   initialisePlotData(host: IVisualHost): void {
-    this.plotPoints = new Array<plotData>();
-    this.tickLabels = new Array<{ x: number; label: string; }>();
+    // Cache frequently accessed objects to reduce property chain traversal
+    const controlLimits = this.controlLimits;
+    const outliers = this.outliers;
+    const inputData = this.inputData;
+    const settings = this.inputSettings.settings;
+    const derivedSettings = this.inputSettings.derivedSettings;
+    const colourPalette = this.colourPalette;
+    const isHighContrast = colourPalette.isHighContrast;
+    const foregroundColour = colourPalette.foregroundColour;
+    const n = controlLimits.keys.length;
 
+    // Pre-allocate arrays with known size for better performance
+    this.plotPoints = new Array<plotData>(n);
+    this.tickLabels = new Array<{ x: number; label: string; }>(n);
+
+    // Build table columns (small array, push is fine)
     this.tableColumns = new Array<{ name: string; label: string; }>();
     this.tableColumns.push({ name: "date", label: "Date" });
     this.tableColumns.push({ name: "value", label: "Value" });
-    if (!isNullOrUndefined(this.controlLimits.numerators)) {
+    if (!isNullOrUndefined(controlLimits.numerators)) {
       this.tableColumns.push({ name: "numerator", label: "Numerator" });
     }
-    if (!isNullOrUndefined(this.controlLimits.denominators)) {
+    if (!isNullOrUndefined(controlLimits.denominators)) {
       this.tableColumns.push({ name: "denominator", label: "Denominator" });
     }
-    if (this.inputSettings.settings.lines.show_target) {
+    if (settings.lines.show_target) {
       this.tableColumns.push({ name: "target", label: "Target" });
     }
-    if (this.inputSettings.settings.lines.show_alt_target) {
+    if (settings.lines.show_alt_target) {
       this.tableColumns.push({ name: "alt_target", label: "Alt. Target" });
     }
-    if (this.inputSettings.settings.lines.show_specification) {
+    if (settings.lines.show_specification) {
       this.tableColumns.push({ name: "speclimits_lower", label: "Spec. Lower" },
                              { name: "speclimits_upper", label: "Spec. Upper" });
     }
-    if (this.inputSettings.settings.lines.show_trend) {
+    if (settings.lines.show_trend) {
       this.tableColumns.push({ name: "trend_line", label: "Trend Line" });
     }
-    if (this.inputSettings.derivedSettings.chart_type_props.has_control_limits) {
-      if (this.inputSettings.settings.lines.show_99) {
+    if (derivedSettings.chart_type_props.has_control_limits) {
+      if (settings.lines.show_99) {
         this.tableColumns.push({ name: "ll99", label: "LL 99%" },
                                { name: "ul99", label: "UL 99%" });
       }
-      if (this.inputSettings.settings.lines.show_95) {
+      if (settings.lines.show_95) {
         this.tableColumns.push({ name: "ll95", label: "LL 95%" }, { name: "ul95", label: "UL 95%" });
       }
-      if (this.inputSettings.settings.lines.show_68) {
+      if (settings.lines.show_68) {
         this.tableColumns.push({ name: "ll68", label: "LL 68%" }, { name: "ul68", label: "UL 68%" });
       }
     }
 
-    if (this.inputSettings.settings.outliers.astronomical) {
+    if (settings.outliers.astronomical) {
       this.tableColumns.push({ name: "astpoint", label: "Ast. Point" });
     }
-    if (this.inputSettings.settings.outliers.trend) {
+    if (settings.outliers.trend) {
       this.tableColumns.push({ name: "trend", label: "Trend" });
     }
-    if (this.inputSettings.settings.outliers.shift) {
+    if (settings.outliers.shift) {
       this.tableColumns.push({ name: "shift", label: "Shift" });
     }
 
-    for (let i: number = 0; i < this.controlLimits.keys.length; i++) {
-      const index: number = this.controlLimits.keys[i].x;
-      const aesthetics: defaultSettingsType["scatter"] = this.inputData.scatter_formatting[i];
-      if (this.colourPalette.isHighContrast) {
-        aesthetics.colour = this.colourPalette.foregroundColour;
+    // Cache array references for inner loop
+    const keys = controlLimits.keys;
+    const values = controlLimits.values;
+    const targets = controlLimits.targets;
+    const numerators = controlLimits.numerators;
+    const denominators = controlLimits.denominators;
+    const alt_targets = controlLimits.alt_targets;
+    const ll99 = controlLimits.ll99;
+    const ll95 = controlLimits.ll95;
+    const ll68 = controlLimits.ll68;
+    const ul68 = controlLimits.ul68;
+    const ul95 = controlLimits.ul95;
+    const ul99 = controlLimits.ul99;
+    const speclimits_lower = controlLimits.speclimits_lower;
+    const speclimits_upper = controlLimits.speclimits_upper;
+    const trend_line = controlLimits.trend_line;
+    const outlierShift = outliers.shift;
+    const outlierTrend = outliers.trend;
+    const outlierTwoInThree = outliers.two_in_three;
+    const outlierAstpoint = outliers.astpoint;
+    const scatterFormatting = inputData.scatter_formatting;
+    const labelFormatting = inputData.label_formatting;
+    const highlights = inputData.highlights;
+    const tooltips = inputData.tooltips;
+    const labels = inputData.labels;
+    const categories = inputData.categories;
+    const limitInputArgsKeys = inputData.limitInputArgs.keys;
+
+    for (let i = 0; i < n; i++) {
+      const index: number = keys[i].x;
+      const aesthetics: defaultSettingsType["scatter"] = scatterFormatting[i];
+      if (isHighContrast) {
+        aesthetics.colour = foregroundColour;
       }
-      if (this.outliers.shift[i] !== "none") {
-        aesthetics.colour = getAesthetic(this.outliers.shift[i], "outliers",
-                                  "shift_colour", this.inputSettings.settings) as string;
-        aesthetics.colour_outline = getAesthetic(this.outliers.shift[i], "outliers",
-                                  "shift_colour", this.inputSettings.settings) as string;
+      if (outlierShift[i] !== "none") {
+        aesthetics.colour = getAesthetic(outlierShift[i], "outliers",
+                                  "shift_colour", settings) as string;
+        aesthetics.colour_outline = getAesthetic(outlierShift[i], "outliers",
+                                  "shift_colour", settings) as string;
       }
-      if (this.outliers.trend[i] !== "none") {
-        aesthetics.colour = getAesthetic(this.outliers.trend[i], "outliers",
-                                  "trend_colour", this.inputSettings.settings) as string;
-        aesthetics.colour_outline = getAesthetic(this.outliers.trend[i], "outliers",
-                                  "trend_colour", this.inputSettings.settings) as string;
+      if (outlierTrend[i] !== "none") {
+        aesthetics.colour = getAesthetic(outlierTrend[i], "outliers",
+                                  "trend_colour", settings) as string;
+        aesthetics.colour_outline = getAesthetic(outlierTrend[i], "outliers",
+                                  "trend_colour", settings) as string;
       }
-      if (this.outliers.two_in_three[i] !== "none") {
-        aesthetics.colour = getAesthetic(this.outliers.two_in_three[i], "outliers",
-                                  "twointhree_colour", this.inputSettings.settings) as string;
-        aesthetics.colour_outline = getAesthetic(this.outliers.two_in_three[i], "outliers",
-                                  "twointhree_colour", this.inputSettings.settings) as string;
+      if (outlierTwoInThree[i] !== "none") {
+        aesthetics.colour = getAesthetic(outlierTwoInThree[i], "outliers",
+                                  "twointhree_colour", settings) as string;
+        aesthetics.colour_outline = getAesthetic(outlierTwoInThree[i], "outliers",
+                                  "twointhree_colour", settings) as string;
       }
-      if (this.outliers.astpoint[i] !== "none") {
-        aesthetics.colour = getAesthetic(this.outliers.astpoint[i], "outliers",
-                                  "ast_colour", this.inputSettings.settings) as string;
-        aesthetics.colour_outline = getAesthetic(this.outliers.astpoint[i], "outliers",
-                                  "ast_colour", this.inputSettings.settings) as string;
+      if (outlierAstpoint[i] !== "none") {
+        aesthetics.colour = getAesthetic(outlierAstpoint[i], "outliers",
+                                  "ast_colour", settings) as string;
+        aesthetics.colour_outline = getAesthetic(outlierAstpoint[i], "outliers",
+                                  "ast_colour", settings) as string;
       }
       const table_row: summaryTableRowData = {
-        date: this.controlLimits.keys[i].label,
-        numerator: this.controlLimits.numerators?.[i],
-        denominator: this.controlLimits.denominators?.[i],
-        value: this.controlLimits.values[i],
-        target: this.controlLimits.targets[i],
-        alt_target: this.controlLimits.alt_targets[i],
-        ll99: this.controlLimits?.ll99?.[i],
-        ll95: this.controlLimits?.ll95?.[i],
-        ll68: this.controlLimits?.ll68?.[i],
-        ul68: this.controlLimits?.ul68?.[i],
-        ul95: this.controlLimits?.ul95?.[i],
-        ul99: this.controlLimits?.ul99?.[i],
-        speclimits_lower: this.controlLimits?.speclimits_lower?.[i],
-        speclimits_upper: this.controlLimits?.speclimits_upper?.[i],
-        trend_line: this.controlLimits?.trend_line?.[i],
-        astpoint: this.outliers.astpoint[i],
-        trend: this.outliers.trend[i],
-        shift: this.outliers.shift[i],
-        two_in_three: this.outliers.two_in_three[i]
+        date: keys[i].label,
+        numerator: numerators?.[i],
+        denominator: denominators?.[i],
+        value: values[i],
+        target: targets[i],
+        alt_target: alt_targets[i],
+        ll99: ll99?.[i],
+        ll95: ll95?.[i],
+        ll68: ll68?.[i],
+        ul68: ul68?.[i],
+        ul95: ul95?.[i],
+        ul99: ul99?.[i],
+        speclimits_lower: speclimits_lower?.[i],
+        speclimits_upper: speclimits_upper?.[i],
+        trend_line: trend_line?.[i],
+        astpoint: outlierAstpoint[i],
+        trend: outlierTrend[i],
+        shift: outlierShift[i],
+        two_in_three: outlierTwoInThree[i]
       }
 
 
-      this.plotPoints.push({
+      // Direct assignment instead of push() for pre-allocated arrays
+      this.plotPoints[i] = {
         x: index,
-        value: this.controlLimits.values[i],
+        value: values[i],
         aesthetics: aesthetics,
         table_row: table_row,
         identity: host.createSelectionIdBuilder()
-                      .withCategory(this.inputData.categories, this.inputData.limitInputArgs.keys[i].id)
+                      .withCategory(categories, limitInputArgsKeys[i].id)
                       .createSelectionId(),
-        highlighted: !isNullOrUndefined(this.inputData.highlights?.[index]),
-        tooltip: buildTooltip(table_row, this.inputData?.tooltips?.[index],
-                              this.inputSettings.settings, this.inputSettings.derivedSettings),
+        highlighted: !isNullOrUndefined(highlights?.[index]),
+        tooltip: buildTooltip(table_row, tooltips?.[index],
+                              settings, derivedSettings),
         label: {
-          text_value: this.inputData.labels?.[index],
-          aesthetics: this.inputData.label_formatting[index],
+          text_value: labels?.[index],
+          aesthetics: labelFormatting[index],
           angle: null,
           distance: null,
           line_offset: null,
           marker_offset: null
         }
-      })
-      this.tickLabels.push({x: index, label: this.controlLimits.keys[i].label});
+      };
+      this.tickLabels[i] = {x: index, label: keys[i].label};
     }
   }
 
   initialiseGroupedLines(): void {
+    // Cache frequently accessed settings objects
+    const linesSettings = this.inputSettings.settings.lines;
+    const derivedSettings = this.inputSettings.derivedSettings;
+    const controlLimits = this.controlLimits;
+    const nLimits = controlLimits.keys.length;
+
+    // Build labels array (small, push is fine)
     const labels: string[] = new Array<string>();
-    if (this.inputSettings.settings.lines.show_main) {
+    if (linesSettings.show_main) {
       labels.push("values");
     }
-    if (this.inputSettings.settings.lines.show_target) {
+    if (linesSettings.show_target) {
       labels.push("targets");
     }
-    if (this.inputSettings.settings.lines.show_alt_target) {
+    if (linesSettings.show_alt_target) {
       labels.push("alt_targets");
     }
-    if (this.inputSettings.settings.lines.show_specification) {
+    if (linesSettings.show_specification) {
       labels.push("speclimits_lower", "speclimits_upper");
     }
-    if (this.inputSettings.settings.lines.show_trend) {
+    if (linesSettings.show_trend) {
       labels.push("trend_line");
     }
-    if (this.inputSettings.derivedSettings.chart_type_props.has_control_limits) {
-      if (this.inputSettings.settings.lines.show_99) {
+    if (derivedSettings.chart_type_props.has_control_limits) {
+      if (linesSettings.show_99) {
         labels.push("ll99", "ul99");
       }
-      if (this.inputSettings.settings.lines.show_95) {
+      if (linesSettings.show_95) {
         labels.push("ll95", "ul95");
       }
-      if (this.inputSettings.settings.lines.show_68) {
+      if (linesSettings.show_68) {
         labels.push("ll68", "ul68");
       }
     }
 
-    const formattedLines: lineData[] = new Array<lineData>();
-    const nLimits = this.controlLimits.keys.length;
+    const nLabels = labels.length;
+    const showAltTarget = linesSettings.show_alt_target;
 
-    for (let i: number = 0; i < nLimits; i++) {
-      const isRebaselinePoint: boolean = this.splitIndexes.includes(i - 1) || this.inputData.groupingIndexes.includes(i - 1);
+    // Use Set for O(1) lookup instead of O(n) array.includes()
+    const splitIndexesSet = new Set(this.splitIndexes.map(idx => idx));
+    const groupingIndexesSet = new Set(this.inputData.groupingIndexes.map(idx => idx));
+
+    // Pre-cache join_rebaselines settings for each label to avoid repeated property lookups
+    const joinRebaselinesMap = new Map<string, boolean>();
+    for (let j = 0; j < nLabels; j++) {
+      const label = labels[j];
+      joinRebaselinesMap.set(label, linesSettings[`join_rebaselines_${lineNameMap[label]}`]);
+    }
+
+    // Cache array references for inner loop
+    const keys = controlLimits.keys;
+    const altTargets = controlLimits.alt_targets;
+
+    // Build grouped lines directly into a Map instead of creating intermediate array
+    // This avoids the overhead of groupBy which iterates the entire array
+    const groupedLinesMap = new Map<string, lineData[]>();
+    for (let j = 0; j < nLabels; j++) {
+      groupedLinesMap.set(labels[j], new Array<lineData>());
+    }
+
+    for (let i = 0; i < nLimits; i++) {
+      const prevIdx = i - 1;
+      const isRebaselinePoint: boolean = splitIndexesSet.has(prevIdx) || groupingIndexesSet.has(prevIdx);
       let isNewAltTarget: boolean = false;
-      if (i > 0 && this.inputSettings.settings.lines.show_alt_target) {
-        isNewAltTarget = this.controlLimits.alt_targets[i] !== this.controlLimits.alt_targets[i - 1];
+      if (i > 0 && showAltTarget) {
+        isNewAltTarget = altTargets[i] !== altTargets[prevIdx];
       }
-      labels.forEach(label => {
-        const join_rebaselines: boolean = this.inputSettings.settings.lines[`join_rebaselines_${lineNameMap[label]}`];
+      const xValue = keys[i].x;
+
+      for (let j = 0; j < nLabels; j++) {
+        const label = labels[j];
+        const lineArray = groupedLinesMap.get(label)!;
+        const lineValue = controlLimits[label]?.[i];
+
         // By adding an additional null line value at each re-baseline point
         // we avoid rendering a line joining each segment
         if (isRebaselinePoint || isNewAltTarget) {
           const is_alt_target: boolean = label === "alt_targets" && isNewAltTarget;
           const is_rebaseline: boolean = label !== "alt_targets" && isRebaselinePoint;
-          formattedLines.push({
-            x: this.controlLimits.keys[i].x,
-            line_value: (!join_rebaselines && (is_alt_target || is_rebaseline)) ? null : this.controlLimits[label]?.[i],
+          const join_rebaselines = joinRebaselinesMap.get(label)!;
+          lineArray.push({
+            x: xValue,
+            line_value: (!join_rebaselines && (is_alt_target || is_rebaseline)) ? null : lineValue,
             group: label
-          })
+          });
         }
 
-        formattedLines.push({
-          x: this.controlLimits.keys[i].x,
-          line_value: this.controlLimits[label]?.[i],
+        lineArray.push({
+          x: xValue,
+          line_value: lineValue,
           group: label
-        })
-      })
+        });
+      }
     }
-    this.groupedLines = groupBy(formattedLines, "group");
+    this.groupedLines = Array.from(groupedLinesMap);
   }
 
   scaleAndTruncateLimits(controlLimits: controlLimitsObject,

@@ -519,7 +519,31 @@ The algorithms now demonstrate linear O(n) scaling instead of the original O(n²
 **Key Optimization Technique:**
 The symbol path cache stores pre-computed D3 symbol path strings, eliminating redundant trigonometric calculations. Since D3 symbol paths are deterministic (same shape + size = same path), caching provides massive performance benefits with minimal memory overhead (~3.2KB for typical usage).
 
-### Session 5: Pending
+### Session 5: Data Processing & ViewModel Optimizations ✅ COMPLETED
+
+**Completion Date:** 2025-11-27
+
+**Summary:** Delivered targeted performance improvements to the ViewModel data processing pipeline through array pre-allocation, cached property lookups, and optimized grouping algorithms. These optimizations reduce memory pressure and improve CPU efficiency during visual update cycles.
+
+**Key Deliverables:**
+- ✅ Pre-allocated arrays in `initialisePlotData` with direct index assignment
+- ✅ Cached property chain lookups to reduce object traversal overhead
+- ✅ Set-based index lookups in `initialiseGroupedLines` for O(1) vs O(n) rebaseline checks
+- ✅ Direct Map grouping to eliminate intermediate array and groupBy overhead
+- ✅ Added ViewModel processing benchmarks to track optimization effectiveness
+- ✅ All 833 tests continue to pass
+- ✅ Benchmark baseline updated with Session 5 metrics
+
+**Detailed Documentation:** See [PERFORMANCE_IMPROVEMENT_PLAN_SESSION_5.md](PERFORMANCE_IMPROVEMENT_PLAN_SESSION_5.md)
+
+**Performance Improvements:**
+
+| Optimization | Impact |
+|--------------|--------|
+| Array pre-allocation | ~13% faster at 1000 points, reduced GC pressure |
+| Cached property lookups | Reduced property chain traversal overhead |
+| Set-based index lookups | O(1) vs O(n) per iteration for rebaseline checks |
+| Direct Map grouping | Eliminated intermediate array, single-pass grouping |
 
 ---
 
@@ -532,3 +556,4 @@ The symbol path cache stores pre-computed D3 symbol path strings, eliminating re
 | 1.2 | 2025-11-27 | Performance Agent | Session 2 completion, significant limit calculation optimizations |
 | 1.3 | 2025-11-27 | Performance Agent | Session 3 completion, outlier detection optimizations with sliding window |
 | 1.4 | 2025-11-27 | Performance Agent | Session 4 completion, D3 rendering pipeline optimizations with symbol caching |
+| 1.5 | 2025-11-27 | Performance Agent | Session 5 completion, ViewModel data processing optimizations | |
