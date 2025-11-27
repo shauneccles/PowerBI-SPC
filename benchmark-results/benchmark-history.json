@@ -1090,5 +1090,369 @@
         "stdDev": 43.16634051835188
       }
     ]
+  },
+  {
+    "timestamp": "2025-11-27T09:26:07.807Z",
+    "gitCommit": "ecc78887a05e2f2543f03224b6fcd2af4d2384f2",
+    "gitBranch": "copilot/improve-performance-power-bi-visual",
+    "environment": {
+      "nodeVersion": "v20.19.5",
+      "platform": "linux",
+      "arch": "x64"
+    },
+    "results": [
+      {
+        "name": "i chart",
+        "category": "Limit Calculations",
+        "dataPoints": 10,
+        "iterations": 20,
+        "median": 12.28299999979754,
+        "mean": 24.90859999998065,
+        "min": 10.168999999677908,
+        "max": 154.38899999981004,
+        "stdDev": 32.03101883234179
+      },
+      {
+        "name": "i chart",
+        "category": "Limit Calculations",
+        "dataPoints": 100,
+        "iterations": 20,
+        "median": 65.08199999984754,
+        "mean": 67.5385000000233,
+        "min": 63.307999999778986,
+        "max": 90.53999999969164,
+        "stdDev": 6.743187476923986
+      },
+      {
+        "name": "i chart",
+        "category": "Limit Calculations",
+        "dataPoints": 500,
+        "iterations": 20,
+        "median": 323.2354999997824,
+        "mean": 280.17744999997376,
+        "min": 165.74100000025282,
+        "max": 376.63500000007843,
+        "stdDev": 80.79257988481633
+      },
+      {
+        "name": "i chart",
+        "category": "Limit Calculations",
+        "dataPoints": 1000,
+        "iterations": 20,
+        "median": 538.2074999999986,
+        "mean": 626.7472000000453,
+        "min": 521.3149999999587,
+        "max": 2313.5990000000675,
+        "stdDev": 387.2400925571444
+      },
+      {
+        "name": "mr chart",
+        "category": "Limit Calculations",
+        "dataPoints": 10,
+        "iterations": 20,
+        "median": 3.401499999654334,
+        "mean": 6.049899999879926,
+        "min": 2.8959999999642605,
+        "max": 22.040999999717314,
+        "stdDev": 5.136492742075211
+      },
+      {
+        "name": "mr chart",
+        "category": "Limit Calculations",
+        "dataPoints": 100,
+        "iterations": 20,
+        "median": 14.026000000058048,
+        "mean": 14.916900000002897,
+        "min": 13.586000000032072,
+        "max": 32.4110000001383,
+        "stdDev": 4.026681001797045
+      },
+      {
+        "name": "mr chart",
+        "category": "Limit Calculations",
+        "dataPoints": 500,
+        "iterations": 20,
+        "median": 141.95050000012088,
+        "mean": 143.55169999996633,
+        "min": 140.42299999982788,
+        "max": 158.7670000003527,
+        "stdDev": 4.508016671499114
+      },
+      {
+        "name": "mr chart",
+        "category": "Limit Calculations",
+        "dataPoints": 1000,
+        "iterations": 20,
+        "median": 480.1284999998643,
+        "mean": 479.8833499999546,
+        "min": 473.03499999998166,
+        "max": 498.14299999979994,
+        "stdDev": 6.178522446909127
+      },
+      {
+        "name": "run chart",
+        "category": "Limit Calculations",
+        "dataPoints": 10,
+        "iterations": 20,
+        "median": 11.757499999930587,
+        "mean": 19.145799999910196,
+        "min": 6.802999999763415,
+        "max": 112.69099999981336,
+        "stdDev": 23.668271541435498
+      },
+      {
+        "name": "run chart",
+        "category": "Limit Calculations",
+        "dataPoints": 100,
+        "iterations": 20,
+        "median": 43.66200000004028,
+        "mean": 65.4205999999931,
+        "min": 39.73500000029162,
+        "max": 121.88800000012634,
+        "stdDev": 31.928158843581034
+      },
+      {
+        "name": "run chart",
+        "category": "Limit Calculations",
+        "dataPoints": 500,
+        "iterations": 20,
+        "median": 233.69800000000396,
+        "mean": 285.8361500000001,
+        "min": 178.29299999993964,
+        "max": 1033.2640000001447,
+        "stdDev": 179.5013257459015
+      },
+      {
+        "name": "run chart",
+        "category": "Limit Calculations",
+        "dataPoints": 1000,
+        "iterations": 20,
+        "median": 634.2075000002296,
+        "mean": 628.8028000000622,
+        "min": 576.2989999998354,
+        "max": 694.5609999997941,
+        "stdDev": 31.182015155500757
+      },
+      {
+        "name": "p chart",
+        "category": "Limit Calculations",
+        "dataPoints": 10,
+        "iterations": 20,
+        "median": 15.760000000227592,
+        "mean": 20.285000000012587,
+        "min": 14.146999999866239,
+        "max": 55.92500000011569,
+        "stdDev": 10.066025278173523
+      },
+      {
+        "name": "p chart",
+        "category": "Limit Calculations",
+        "dataPoints": 100,
+        "iterations": 20,
+        "median": 72.9714999999942,
+        "mean": 84.7675499999923,
+        "min": 66.27399999979389,
+        "max": 162.90500000013708,
+        "stdDev": 22.505677238181217
+      },
+      {
+        "name": "p chart",
+        "category": "Limit Calculations",
+        "dataPoints": 500,
+        "iterations": 20,
+        "median": 448.12449999994897,
+        "mean": 479.86439999999675,
+        "min": 425.65700000022844,
+        "max": 1004.511999999977,
+        "stdDev": 125.55629661802045
+      },
+      {
+        "name": "p chart",
+        "category": "Limit Calculations",
+        "dataPoints": 1000,
+        "iterations": 20,
+        "median": 1239.9159999999938,
+        "mean": 1272.851799999944,
+        "min": 1232.1569999999156,
+        "max": 1865.4719999999543,
+        "stdDev": 136.17896432768552
+      },
+      {
+        "name": "astronomical rule",
+        "category": "Outlier Detection",
+        "dataPoints": 10,
+        "iterations": 20,
+        "median": 1.903500000025815,
+        "mean": 2.2839500000145563,
+        "min": 1.8430000000080327,
+        "max": 5.661000000145577,
+        "stdDev": 0.9785340297945263
+      },
+      {
+        "name": "astronomical rule",
+        "category": "Outlier Detection",
+        "dataPoints": 100,
+        "iterations": 20,
+        "median": 30.156499999975495,
+        "mean": 28.5053500000231,
+        "min": 15.940000000227883,
+        "max": 66.28399999999601,
+        "stdDev": 11.09894755490734
+      },
+      {
+        "name": "astronomical rule",
+        "category": "Outlier Detection",
+        "dataPoints": 500,
+        "iterations": 20,
+        "median": 15.749499999856198,
+        "mean": 34.69244999992043,
+        "min": 15.439000000242231,
+        "max": 120.90699999998833,
+        "stdDev": 29.45285080680481
+      },
+      {
+        "name": "astronomical rule",
+        "category": "Outlier Detection",
+        "dataPoints": 1000,
+        "iterations": 20,
+        "median": 25.33199999993485,
+        "mean": 25.47645000004195,
+        "min": 25.146999999833497,
+        "max": 26.780000000144355,
+        "stdDev": 0.40038300102924756
+      },
+      {
+        "name": "shift rule",
+        "category": "Outlier Detection",
+        "dataPoints": 10,
+        "iterations": 20,
+        "median": 3.651499999932639,
+        "mean": 4.2058999999426305,
+        "min": 3.5559999996621627,
+        "max": 10.780000000067957,
+        "stdDev": 1.5755320657073701
+      },
+      {
+        "name": "shift rule",
+        "category": "Outlier Detection",
+        "dataPoints": 100,
+        "iterations": 20,
+        "median": 30.451999999968393,
+        "mean": 36.10425000001669,
+        "min": 30.216999999993277,
+        "max": 119.043000000147,
+        "stdDev": 19.484358316067116
+      },
+      {
+        "name": "shift rule",
+        "category": "Outlier Detection",
+        "dataPoints": 500,
+        "iterations": 20,
+        "median": 70.69200000000819,
+        "mean": 81.82959999999184,
+        "min": 54.953000000296015,
+        "max": 187.89200000037454,
+        "stdDev": 36.544095478571705
+      },
+      {
+        "name": "shift rule",
+        "category": "Outlier Detection",
+        "dataPoints": 1000,
+        "iterations": 20,
+        "median": 114.70949999988989,
+        "mean": 119.01884999995218,
+        "min": 113.92299999988609,
+        "max": 147.10599999989427,
+        "stdDev": 9.296200478010777
+      },
+      {
+        "name": "trend rule",
+        "category": "Outlier Detection",
+        "dataPoints": 10,
+        "iterations": 20,
+        "median": 3.265999999939595,
+        "mean": 4.823050000004514,
+        "min": 3.105000000232394,
+        "max": 25.468000000273605,
+        "stdDev": 4.928642211415546
+      },
+      {
+        "name": "trend rule",
+        "category": "Outlier Detection",
+        "dataPoints": 100,
+        "iterations": 20,
+        "median": 55.44349999991027,
+        "mean": 53.12359999993532,
+        "min": 25.868999999602238,
+        "max": 126.53699999964374,
+        "stdDev": 21.885525996369037
+      },
+      {
+        "name": "trend rule",
+        "category": "Outlier Detection",
+        "dataPoints": 500,
+        "iterations": 20,
+        "median": 52.63300000001436,
+        "mean": 74.62659999991956,
+        "min": 51.53699999982564,
+        "max": 205.05400000001828,
+        "stdDev": 48.141172956668484
+      },
+      {
+        "name": "trend rule",
+        "category": "Outlier Detection",
+        "dataPoints": 1000,
+        "iterations": 20,
+        "median": 105.66800000015064,
+        "mean": 138.51830000003247,
+        "min": 103.8140000000567,
+        "max": 278.38100000008126,
+        "stdDev": 61.251773202139205
+      },
+      {
+        "name": "twoInThree rule",
+        "category": "Outlier Detection",
+        "dataPoints": 10,
+        "iterations": 20,
+        "median": 3.376000000116619,
+        "mean": 3.8417999999637686,
+        "min": 3.315999999813357,
+        "max": 8.526999999958207,
+        "stdDev": 1.1641867376155859
+      },
+      {
+        "name": "twoInThree rule",
+        "category": "Outlier Detection",
+        "dataPoints": 100,
+        "iterations": 20,
+        "median": 27.1860000000288,
+        "mean": 31.664799999930437,
+        "min": 18.374000000221713,
+        "max": 73.8389999996798,
+        "stdDev": 16.279293106800075
+      },
+      {
+        "name": "twoInThree rule",
+        "category": "Outlier Detection",
+        "dataPoints": 500,
+        "iterations": 20,
+        "median": 59.446499999694424,
+        "mean": 78.20134999997208,
+        "min": 57.61800000027506,
+        "max": 183.44299999989744,
+        "stdDev": 31.231990245982146
+      },
+      {
+        "name": "twoInThree rule",
+        "category": "Outlier Detection",
+        "dataPoints": 1000,
+        "iterations": 20,
+        "median": 116.21750000017528,
+        "mean": 118.29924999999548,
+        "min": 114.97499999995853,
+        "max": 130.36400000009962,
+        "stdDev": 4.893517200102487
+      }
+    ]
   }
 ]
