@@ -5,6 +5,48 @@ import * as nhsIcons from "./NHS Icons"
 import * as d3 from "./D3 Modules";
 import type { defaultSettingsType } from "../Classes";
 import { identitySelected } from "../Functions";
+import { VirtualTable, DEFAULT_VIRTUAL_TABLE_CONFIG, type VirtualTableConfig } from "./VirtualTable";
+
+// Global virtual table instance (reused across renders)
+let globalVirtualTable: VirtualTable | null = null;
+
+/**
+ * Session 7: Configuration for summary table virtualization
+ * Virtualization is automatically enabled for large datasets
+ */
+export const VIRTUALIZATION_CONFIG: VirtualTableConfig = {
+  ...DEFAULT_VIRTUAL_TABLE_CONFIG,
+  rowHeight: 32,
+  bufferSize: 5,
+  minRowsForVirtualization: 50
+};
+
+/**
+ * Get or create the global virtual table instance
+ */
+export function getVirtualTable(): VirtualTable {
+  if (!globalVirtualTable) {
+    globalVirtualTable = new VirtualTable(VIRTUALIZATION_CONFIG);
+  }
+  return globalVirtualTable;
+}
+
+/**
+ * Clear the global virtual table instance (for cleanup/testing)
+ */
+export function clearVirtualTable(): void {
+  if (globalVirtualTable) {
+    globalVirtualTable.dispose();
+    globalVirtualTable = null;
+  }
+}
+
+/**
+ * Check if virtualization should be used for the current dataset
+ */
+export function shouldUseVirtualization(dataLength: number): boolean {
+  return dataLength >= VIRTUALIZATION_CONFIG.minRowsForVirtualization;
+}
 
 function drawTableHeaders(selection: divBaseType, cols: { name: string; label: string; }[],
                           tableSettings: defaultSettingsType["summary_table"], maxWidth: number) {
@@ -186,6 +228,44 @@ function drawTableCells(selection: divBaseType, cols: { name: string; label: str
   })
 }
 
+/**
+ * Draw virtualized summary table for large datasets
+ * Session 7: Uses VirtualTable for efficient rendering of large datasets
+ */
+function drawVirtualizedTable(
+  selection: divBaseType,
+  visualObj: Visual,
+  plotPoints: plotData[] | plotDataGrouped[],
+  cols: { name: string; label: string; }[],
+  tableSettings: defaultSettingsType["summary_table"],
+  maxWidth: number
+): void {
+  const container = selection.node() as HTMLDivElement;
+  const tableBody = container.querySelector('.table-body') as HTMLTableSectionElement;
+  
+  if (!container || !tableBody) return;
+  
+  const virtualTable = getVirtualTable();
+  
+  // Initialize virtual table with container elements
+  virtualTable.initialize(container, tableBody, visualObj);
+  
+  // Render with virtualization
+  virtualTable.render(
+    plotPoints,
+    cols,
+    tableSettings,
+    visualObj.viewModel.inputSettings.settings,
+    visualObj.viewModel.showGrouped,
+    maxWidth,
+    visualObj
+  );
+}
+
+/**
+ * Main function to draw the summary table
+ * Session 7: Automatically uses virtualization for large datasets
+ */
 export default function drawSummaryTable(selection: divBaseType, visualObj: Visual) {
   selection.selectAll(".rowsvg").remove();
   selection.selectAll(".cell-text").remove();
@@ -204,11 +284,20 @@ export default function drawSummaryTable(selection: divBaseType, visualObj: Visu
   const maxWidth: number = visualObj.viewModel.svgWidth / cols.length;
   const tableSettings = visualObj.viewModel.inputSettings.settings.summary_table;
 
-  selection.call(drawTableHeaders, cols, tableSettings, maxWidth)
-            .call(drawTableRows, visualObj, plotPoints, tableSettings, maxWidth);
+  // Draw headers (common to both paths)
+  selection.call(drawTableHeaders, cols, tableSettings, maxWidth);
 
-  if (plotPoints.length > 0) {
-    selection.call(drawTableCells, cols, visualObj.viewModel.inputSettings.settings, visualObj.viewModel.showGrouped)
+  // Session 7: Use virtualization for large datasets
+  if (shouldUseVirtualization(plotPoints.length)) {
+    // Use virtualized rendering
+    drawVirtualizedTable(selection, visualObj, plotPoints, cols, tableSettings, maxWidth);
+  } else {
+    // Use traditional D3 rendering for small datasets
+    selection.call(drawTableRows, visualObj, plotPoints, tableSettings, maxWidth);
+
+    if (plotPoints.length > 0) {
+      selection.call(drawTableCells, cols, visualObj.viewModel.inputSettings.settings, visualObj.viewModel.showGrouped)
+    }
   }
 
   selection.call(drawOuterBorder, tableSettings);
