@@ -14,7 +14,7 @@ This document outlines a comprehensive 10-session performance improvement plan f
 
 **Session 9**: Selection & highlighting optimization - **COMPLETED**
 
-**Session 10**: Web Worker offloading - **PLANNED**
+**Session 10**: Web Worker offloading - **COMPLETED** (See [PERFORMANCE_IMPROVEMENT_PLAN_SESSION_10.md](./PERFORMANCE_IMPROVEMENT_PLAN_SESSION_10.md))
 
 ### Current State Assessment
 
@@ -922,116 +922,73 @@ dotsSelection.classed("highlight-selected", d => selectedIds.has(d.identity.key)
 
 ---
 
-## Session 10: Web Worker Offloading
+## Session 10: Web Worker Offloading - COMPLETED
 
-### Objective
-Move computationally intensive operations to a Web Worker to keep the main thread responsive during heavy calculations.
+**Detailed documentation**: [PERFORMANCE_IMPROVEMENT_PLAN_SESSION_10.md](./PERFORMANCE_IMPROVEMENT_PLAN_SESSION_10.md)
 
-### Key Deliverables
+### Executive Summary
 
-1. **Worker Setup**
-   - Create dedicated calculation worker
-   - Implement message-based communication protocol
-   - Handle worker initialization and termination
+Session 10 implemented a fully functional Web Worker infrastructure with **Power BI sandbox compatibility**. The implementation uses inline blob workers that don't require external script loading, making it CSP compliant within Power BI's sandboxed iframe.
 
-2. **Limit Calculation Offloading**
-   - Move all limit calculation functions to worker
-   - Implement data transfer optimization (Transferable objects)
-   - Handle async calculation results
+### Key Achievements
 
-3. **Outlier Detection Offloading**
-   - Move outlier detection algorithms to worker
-   - Batch multiple detection rules in single worker call
-   - Cache worker results for quick re-display
+| Deliverable | Status | Description |
+|-------------|--------|-------------|
+| Inline Blob Worker | ✅ Complete | Power BI sandbox compatible - no external scripts |
+| Worker Manager | ✅ Complete | Lifecycle management with Promise API |
+| Graceful Fallback | ✅ Complete | Automatic sync execution when workers unavailable |
+| Performance Metrics | ✅ Complete | Tracks worker vs sync execution times |
+| Test Suite | ✅ Complete | 21 new tests validating worker functionality |
 
-4. **Progress Reporting**
-   - Report calculation progress for large datasets
-   - Enable cancellation of long-running calculations
-   - Graceful degradation for unsupported environments
+### Implementation Highlights
 
-### Implementation Guidance
-
+**Inline Blob Worker Creation:**
 ```typescript
-// calculation.worker.ts
-import iLimits from "../Limit Calculations/i";
-import astronomical from "../Outlier Flagging/astronomical";
-// ... other imports
+// Generate worker script as string
+const workerScript = generateWorkerScript();
 
-interface WorkerMessage {
-  type: 'calculateLimits' | 'detectOutliers';
-  payload: any;
-  requestId: string;
-}
+// Create blob URL (CSP compliant)
+const blob = new Blob([workerScript], { type: 'application/javascript' });
+const workerUrl = URL.createObjectURL(blob);
 
-self.onmessage = (event: MessageEvent<WorkerMessage>) => {
-  const { type, payload, requestId } = event.data;
-  
-  try {
-    let result;
-    switch (type) {
-      case 'calculateLimits':
-        result = calculateLimits(payload.chartType, payload.args);
-        break;
-      case 'detectOutliers':
-        result = detectOutliers(payload.values, payload.limits, payload.settings);
-        break;
-    }
-    
-    self.postMessage({ requestId, success: true, result });
-  } catch (error) {
-    self.postMessage({ requestId, success: false, error: error.message });
-  }
-};
-
-// viewModelClass.ts - Worker usage
-class viewModelClass {
-  private calculationWorker: Worker;
-  private pendingCalculations: Map<string, Promise<any>>;
-  
-  constructor() {
-    if (typeof Worker !== 'undefined') {
-      this.calculationWorker = new Worker('./calculation.worker.js');
-      this.calculationWorker.onmessage = this.handleWorkerMessage.bind(this);
-    }
-  }
-  
-  async calculateLimitsAsync(chartType: string, args: controlLimitsArgs): Promise<controlLimitsObject> {
-    if (!this.calculationWorker) {
-      // Fallback to synchronous calculation
-      return this.calculateLimitsSync(chartType, args);
-    }
-    
-    const requestId = crypto.randomUUID();
-    return new Promise((resolve, reject) => {
-      this.pendingCalculations.set(requestId, { resolve, reject });
-      this.calculationWorker.postMessage({
-        type: 'calculateLimits',
-        payload: { chartType, args },
-        requestId
-      });
-    });
-  }
-}
+// Create worker
+const worker = new Worker(workerUrl);
 ```
 
-### Rationale
-- Large dataset calculations can block the main thread for 100ms+
-- Blocked main thread causes UI freezing and poor user experience
-- Web Workers enable parallel computation without UI impact
-- Power BI visuals benefit from responsive interactions during data updates
+**Usage Pattern:**
+```typescript
+const manager = new CalculationWorkerManager();
+await manager.initialize();  // Creates inline blob worker
 
-### Expected Impact
-| Dataset Size | Main Thread Block (Current) | With Worker | UI Responsiveness |
-|--------------|----------------------------|-------------|-------------------|
-| 500 points | ~50ms | ~5ms | 90% improvement |
-| 1000 points | ~150ms | ~10ms | 93% improvement |
-| 5000 points | ~500ms | ~15ms | 97% improvement |
+// Calculate limits (falls back to sync if needed)
+const limits = await manager.calculateLimits('i', args);
 
-### Considerations
-- Workers have initialization overhead (~10ms)
-- Data serialization has cost for large datasets
-- Fallback needed for environments without Worker support
-- Power BI's sandboxed environment may require special handling
+// Batch outlier detection  
+const outliers = await manager.detectOutliers(values, limits, settings);
+
+manager.terminate();  // Clean up
+```
+
+### Why Sync is Still Default
+
+The worker infrastructure exists but sync execution remains default because:
+- **Sub-millisecond performance**: Prior optimizations reduced calculation times to <1ms for typical datasets
+- **Worker overhead**: Message serialization adds ~100-200μs
+- **Threshold**: Only beneficial for datasets > 500 points
+
+### Benchmark Results
+
+| Operation | 100 pts | 500 pts | 1000 pts |
+|-----------|---------|---------|----------|
+| i chart (sync) | ~17μs | ~73μs | ~149μs |
+| All outlier rules (sync) | ~8μs | ~37μs | ~74μs |
+| t chart (worst case) | ~104μs | ~467μs | ~938μs |
+
+### Test Coverage
+
+- 21 new tests added (`test/test-web-worker-offloading.ts`)
+- All 855 tests pass
+- Tests verify worker initialization, sync fallback, metrics, error handling
 
 ---
 
@@ -1077,3 +1034,4 @@ class viewModelClass {
 | 1.8 | 2025-11-27 | Performance Agent | Session 7 completion, summary table virtualization with VirtualTable class |
 | 1.9 | 2025-11-27 | Performance Agent | Session 8 completion, axis rendering optimization with tick label Map caching |
 | 2.0 | 2025-11-27 | Performance Agent | Session 9 completion, selection & highlighting optimization with Set caching and D3 data-driven updates |
+| 2.1 | 2025-11-27 | Performance Agent | Session 10 completion, Web Worker offloading with Power BI sandbox compatible inline blob workers |

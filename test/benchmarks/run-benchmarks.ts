@@ -1297,6 +1297,159 @@ async function runBenchmarks() {
   }
 
   // ============================================================================
+  // WEB WORKER OFFLOADING BENCHMARKS (Session 10)
+  // ============================================================================
+
+  console.log('📊 Benchmarking Web Worker Offloading (Session 10)...');
+
+  // Import Worker Manager
+  const { CalculationWorkerManager } = await import('../../src/Workers');
+
+  // Benchmark: Worker Manager instantiation
+  runner.benchmark(
+    'WorkerManager instantiation',
+    'Web Worker Offloading',
+    () => {
+      const manager = new CalculationWorkerManager();
+      return manager;
+    },
+    { iterations: STANDARD_ITERATIONS, dataPoints: 1 }
+  );
+
+  // Benchmark: Synchronous limit calculation (baseline for comparison)
+  // This simulates the main thread blocking that occurs without workers
+  for (const size of DATA_SIZES) {
+    const args: controlLimitsArgs = {
+      keys: createKeys(size),
+      numerators: generateData(size),
+      subset_points: allIndices(size)
+    };
+
+    const manager = new CalculationWorkerManager({ enabled: false });
+    
+    runner.benchmark(
+      'sync limit calculation (i chart)',
+      'Web Worker Offloading',
+      () => manager.calculateLimitsSync('i', args),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark: Synchronous outlier detection (all rules batched)
+  for (const size of DATA_SIZES) {
+    const values = generateData(size);
+    const limits = {
+      keys: createKeys(size),
+      values,
+      targets: Array(size).fill(50),
+      ll99: Array(size).fill(40),
+      ll95: Array(size).fill(45),
+      ll68: Array(size).fill(48),
+      ul68: Array(size).fill(52),
+      ul95: Array(size).fill(55),
+      ul99: Array(size).fill(60),
+    };
+
+    const manager = new CalculationWorkerManager({ enabled: false });
+    
+    runner.benchmark(
+      'sync outlier detection (all rules)',
+      'Web Worker Offloading',
+      () => manager.detectOutliersSync(values, limits, {
+        astronomical: true,
+        shift: true,
+        shiftN: 8,
+        trend: true,
+        trendN: 6,
+        twoInThree: true,
+        twoInThreeHighlightSeries: false
+      }),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark: Combined limit calculation + outlier detection (full calculation cycle)
+  // This represents the main thread blocking time for a complete update
+  for (const size of DATA_SIZES) {
+    const args: controlLimitsArgs = {
+      keys: createKeys(size),
+      numerators: generateData(size),
+      denominators: generateCountData(size),
+      subset_points: allIndices(size)
+    };
+
+    const manager = new CalculationWorkerManager({ enabled: false });
+    
+    runner.benchmark(
+      'full calculation cycle (sync)',
+      'Web Worker Offloading',
+      () => {
+        // Calculate limits
+        const limits = manager.calculateLimitsSync('p', args);
+        
+        // Detect outliers
+        manager.detectOutliersSync(limits.values, limits, {
+          astronomical: true,
+          shift: true,
+          shiftN: 8,
+          trend: true,
+          trendN: 6,
+          twoInThree: true,
+          twoInThreeHighlightSeries: false
+        });
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark: Worker config access
+  const managerForConfig = new CalculationWorkerManager();
+  runner.benchmark(
+    'WorkerManager getConfig',
+    'Web Worker Offloading',
+    () => managerForConfig.getConfig(),
+    { iterations: STANDARD_ITERATIONS, dataPoints: 1 }
+  );
+
+  // Benchmark: Worker metrics access
+  runner.benchmark(
+    'WorkerManager getMetrics',
+    'Web Worker Offloading',
+    () => managerForConfig.getMetrics(),
+    { iterations: STANDARD_ITERATIONS, dataPoints: 1 }
+  );
+
+  // Benchmark: Worker support check
+  runner.benchmark(
+    'WorkerManager isWorkerSupported',
+    'Web Worker Offloading',
+    () => managerForConfig.isWorkerSupported(),
+    { iterations: STANDARD_ITERATIONS, dataPoints: 1 }
+  );
+
+  // Benchmark: Main thread blocking time simulation
+  // This demonstrates the performance benefit of worker offloading
+  // by showing how much time the main thread would be blocked
+  for (const size of [100, 500, 1000]) {
+    const args: controlLimitsArgs = {
+      keys: createKeys(size),
+      numerators: generateData(size),
+      denominators: generateCountData(size),
+      subset_points: allIndices(size)
+    };
+
+    runner.benchmark(
+      'main thread blocking (t chart)',
+      'Web Worker Offloading',
+      () => {
+        // t chart is one of the slowest limit calculations
+        tLimits(args);
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // ============================================================================
   // SAVE RESULTS
   // ============================================================================
 

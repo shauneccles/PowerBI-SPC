@@ -6,6 +6,7 @@ export * from './Functions';
 export * from './D3 Plotting Functions';
 export * from './Limit Calculations'
 export * from './Outlier Flagging'
+export * from './Workers'
 export { Visual } from './visual';
 
 // Headless use needs a dummy DOM implementation
