@@ -585,6 +585,115 @@ async function runBenchmarks() {
   }
 
   // ============================================================================
+  // VIEWMODEL DATA PROCESSING BENCHMARKS (Session 5)
+  // ============================================================================
+
+  console.log('📊 Benchmarking ViewModel Data Processing (Session 5)...');
+
+  // Import groupBy function
+  const groupBy = (await import('../../src/Functions/groupBy')).default;
+
+  // groupBy function benchmark
+  for (const size of DATA_SIZES) {
+    const testData = Array.from({ length: size }, (_, i) => ({
+      x: i,
+      line_value: Math.random() * 100,
+      group: ['values', 'targets', 'll99', 'ul99'][i % 4]  // 4 groups typical for SPC
+    }));
+
+    runner.benchmark(
+      'groupBy function',
+      'ViewModel Processing',
+      () => groupBy(testData, 'group'),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Array pre-allocation vs push benchmark
+  for (const size of DATA_SIZES) {
+    // Simulate pre-allocation pattern (new optimized approach)
+    runner.benchmark(
+      'array pre-allocation',
+      'ViewModel Processing',
+      () => {
+        const arr = new Array(size);
+        for (let i = 0; i < size; i++) {
+          arr[i] = { x: i, value: Math.random(), label: `Point ${i}` };
+        }
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+
+    // Simulate push pattern (old approach)
+    runner.benchmark(
+      'array push pattern',
+      'ViewModel Processing',
+      () => {
+        const arr: { x: number; value: number; label: string }[] = [];
+        for (let i = 0; i < size; i++) {
+          arr.push({ x: i, value: Math.random(), label: `Point ${i}` });
+        }
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Set.has() vs Array.includes() benchmark
+  for (const size of DATA_SIZES) {
+    const indices = Array.from({ length: Math.floor(size / 10) }, (_, i) => i * 10);
+    const indexSet = new Set(indices);
+
+    // Set.has() - O(1) lookup
+    runner.benchmark(
+      'Set.has() lookup',
+      'ViewModel Processing',
+      () => {
+        for (let i = 0; i < size; i++) {
+          indexSet.has(i);
+        }
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+
+    // Array.includes() - O(n) lookup
+    runner.benchmark(
+      'Array.includes() lookup',
+      'ViewModel Processing',
+      () => {
+        for (let i = 0; i < size; i++) {
+          indices.includes(i);
+        }
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Direct Map grouping vs groupBy function benchmark
+  for (const size of DATA_SIZES) {
+    const testData = Array.from({ length: size }, (_, i) => ({
+      x: i,
+      line_value: Math.random() * 100,
+      group: ['values', 'targets', 'll99', 'ul99'][i % 4]
+    }));
+    const groups = ['values', 'targets', 'll99', 'ul99'];
+
+    // Direct Map grouping (new optimized approach)
+    runner.benchmark(
+      'direct Map grouping',
+      'ViewModel Processing',
+      () => {
+        const groupedMap = new Map<string, Array<{ x: number; line_value: number; group: string }>>();
+        groups.forEach(g => groupedMap.set(g, []));
+        for (let i = 0; i < testData.length; i++) {
+          groupedMap.get(testData[i].group)!.push(testData[i]);
+        }
+        Array.from(groupedMap);
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // ============================================================================
   // SAVE RESULTS
   // ============================================================================
 
