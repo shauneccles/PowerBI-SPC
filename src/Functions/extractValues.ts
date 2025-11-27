@@ -7,7 +7,7 @@
  * @returns Array of values at the specified indices
  */
 export default function extractValues<T>(valuesArray: T[], indexArray: number[]): T[] {
-  if (!valuesArray) {
+  if (!valuesArray || !indexArray || indexArray.length === 0) {
     return [];
   }
   // Use Set for O(1) lookup instead of O(n) indexOf
