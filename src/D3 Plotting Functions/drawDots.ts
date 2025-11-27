@@ -46,8 +46,10 @@ export function getSymbolPath(shape: string, size: number): string {
   let pathString = symbolPathCache.get(key);
   if (pathString === undefined) {
     // d3.symbol() takes size as area instead of radius
+    // Get the symbol type, falling back to Circle if not found
+    const symbolType = d3[`symbol${shape}`] ?? d3.symbolCircle;
     // Generate the path string and cache it
-    pathString = d3.symbol().type(d3[`symbol${shape}`]).size((size * size) * Math.PI)();
+    pathString = d3.symbol().type(symbolType).size((size * size) * Math.PI)();
     symbolPathCache.set(key, pathString);
   }
   return pathString;

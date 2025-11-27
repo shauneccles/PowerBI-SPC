@@ -536,8 +536,10 @@ async function runBenchmarks() {
           const shape = D3_SHAPES[i % D3_SHAPES.length];
           const symbolSize = SYMBOL_SIZES[i % SYMBOL_SIZES.length];
           // Create a new symbol generator each time (the old approach)
+          // Use fallback to symbolCircle if shape not found
+          const symbolType = d3[`symbol${shape}`] ?? d3.symbolCircle;
           const symbolGen = d3.symbol()
-            .type(d3[`symbol${shape}`])
+            .type(symbolType)
             .size((symbolSize * symbolSize) * Math.PI);
           symbolGen();
         }
@@ -552,8 +554,10 @@ async function runBenchmarks() {
     const key = `${shape}-${size}`;
     let path = symbolCache.get(key);
     if (path === undefined) {
+      // Use fallback to symbolCircle if shape not found
+      const symbolType = d3[`symbol${shape}`] ?? d3.symbolCircle;
       const symbolGen = d3.symbol()
-        .type(d3[`symbol${shape}`])
+        .type(symbolType)
         .size((size * size) * Math.PI);
       path = symbolGen();
       symbolCache.set(key, path);
