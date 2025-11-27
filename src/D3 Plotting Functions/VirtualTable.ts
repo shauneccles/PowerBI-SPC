@@ -50,9 +50,6 @@ interface VirtualTableState {
   lastContainerHeight: number;
 }
 
-// NHS icon SVG cache - maps icon name to SVG path string
-const iconSVGCache = new Map<string, string>();
-
 /**
  * Default configuration values
  */
@@ -258,8 +255,13 @@ export class VirtualTable {
     }
     
     // Find new rows to render
+    // Edge case: when visibleStartIdx === visibleEndIdx (initial state or single row),
+    // we need to render all rows in the visible range since the range iteration
+    // would otherwise skip most indices
     for (let i = firstVisible; i <= lastVisible; i++) {
-      if (i < this.state.visibleStartIdx || i > this.state.visibleEndIdx || this.state.visibleStartIdx === this.state.visibleEndIdx) {
+      const isOutsidePreviousRange = i < this.state.visibleStartIdx || i > this.state.visibleEndIdx;
+      const isInitialOrSingleRow = this.state.visibleStartIdx === this.state.visibleEndIdx;
+      if (isOutsidePreviousRange || isInitialOrSingleRow) {
         rowsToAdd.push(i);
       }
     }
@@ -319,8 +321,10 @@ export class VirtualTable {
     // Bind data to row for D3 compatibility
     (row as any).__data__ = rowData;
     
-    // Clear existing cells
-    row.innerHTML = '';
+    // Clear existing cells - use while loop to avoid innerHTML
+    while (row.firstChild) {
+      row.removeChild(row.firstChild);
+    }
     
     // Create cells
     this.renderCells(row, rowData, maxWidth);
@@ -562,6 +566,11 @@ export class VirtualTable {
       this.container.removeEventListener('scroll', this.scrollHandler);
     }
     
+    // Clear virtual data reference before nulling container
+    if (this.container) {
+      (this.container as any)._virtualData = null;
+    }
+    
     this.clearRows();
     this.rowPool = [];
     this.container = null;
@@ -569,11 +578,6 @@ export class VirtualTable {
     this.spacer = null;
     this.scrollHandler = null;
     this.boundVisualObj = null;
-    
-    // Clear virtual data reference
-    if (this.container) {
-      (this.container as any)._virtualData = null;
-    }
   }
 
   /**
@@ -643,20 +647,6 @@ export class VirtualTable {
    */
   getRowPoolSize(): number {
     return this.rowPool.length;
-  }
-
-  /**
-   * Clear the icon cache
-   */
-  static clearIconCache(): void {
-    iconSVGCache.clear();
-  }
-
-  /**
-   * Get icon cache size
-   */
-  static getIconCacheSize(): number {
-    return iconSVGCache.size;
   }
 }
 

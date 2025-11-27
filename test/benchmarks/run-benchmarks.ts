@@ -929,6 +929,7 @@ async function runBenchmarks() {
   }
 
   // Benchmark DOM row creation (simulating row pool allocation)
+  // Note: Using createElementNS for linkedom compatibility in headless benchmark environment
   for (const size of DATA_SIZES) {
     // Only render visible rows (limited set)
     const visibleRows = Math.min(30, size);  // ~30 visible rows typical
@@ -951,6 +952,7 @@ async function runBenchmarks() {
 
   // Benchmark traditional approach (create all rows) vs virtual approach (create visible only)
   // This demonstrates the performance benefit of virtualization
+  // Note: Using createElementNS for linkedom compatibility in headless benchmark environment
   for (const size of DATA_SIZES) {
     // Traditional: create all rows
     runner.benchmark(
@@ -960,7 +962,13 @@ async function runBenchmarks() {
         const rows: HTMLTableRowElement[] = [];
         for (let i = 0; i < size; i++) {
           const row = document.createElementNS('http://www.w3.org/1999/xhtml', 'tr') as HTMLTableRowElement;
-          row.innerHTML = `<td>${i}</td><td>Value ${i}</td>`;
+          // Add cell content using appendChild for security
+          const td1 = document.createElementNS('http://www.w3.org/1999/xhtml', 'td') as HTMLTableCellElement;
+          td1.textContent = String(i);
+          const td2 = document.createElementNS('http://www.w3.org/1999/xhtml', 'td') as HTMLTableCellElement;
+          td2.textContent = `Value ${i}`;
+          row.appendChild(td1);
+          row.appendChild(td2);
           rows.push(row);
         }
         return rows;
@@ -977,7 +985,13 @@ async function runBenchmarks() {
         const rows: HTMLTableRowElement[] = [];
         for (let i = 0; i < visibleCount; i++) {
           const row = document.createElementNS('http://www.w3.org/1999/xhtml', 'tr') as HTMLTableRowElement;
-          row.innerHTML = `<td>${i}</td><td>Value ${i}</td>`;
+          // Add cell content using appendChild for security
+          const td1 = document.createElementNS('http://www.w3.org/1999/xhtml', 'td') as HTMLTableCellElement;
+          td1.textContent = String(i);
+          const td2 = document.createElementNS('http://www.w3.org/1999/xhtml', 'td') as HTMLTableCellElement;
+          td2.textContent = `Value ${i}`;
+          row.appendChild(td1);
+          row.appendChild(td2);
           rows.push(row);
         }
         return rows;
