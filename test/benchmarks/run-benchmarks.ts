@@ -10,6 +10,9 @@
  * - Increased iterations to 50 for more stable results
  * - Added memory tracking and percentile metrics
  * 
+ * Session 4 Enhancement:
+ * - Added symbol path caching benchmarks to measure D3 rendering optimization
+ * 
  * Note: s chart and xbar chart benchmarks are skipped due to circular dependency
  * issues with ts-node when importing Constants.ts (c4, c5, b3, b4 functions).
  * These charts work correctly in the main test suite which uses webpack bundling.
@@ -21,6 +24,7 @@
 
 import { BenchmarkRunner } from './benchmark-runner';
 import { parseHTML } from 'linkedom';
+import * as d3 from 'd3-shape';
 
 // Import limit calculation functions
 // Note: sLimits and xbarLimits are imported but skipped in benchmarks due to
@@ -509,6 +513,71 @@ async function runBenchmarks() {
       svg.removeChild(svg.firstChild);
     }
     existingElements = [];
+  }
+
+  // ============================================================================
+  // SYMBOL PATH CACHING BENCHMARKS (Session 4 Enhancement)
+  // ============================================================================
+
+  console.log('📊 Benchmarking Symbol Path Caching (Session 4)...');
+
+  // D3 symbol shapes available in the visual
+  const D3_SHAPES = ['Circle', 'Cross', 'Diamond', 'Square', 'Star', 'Triangle', 'Wye', 'Asterisk'];
+  const SYMBOL_SIZES = [6, 8, 10, 12]; // Common sizes used in the visual
+
+  // Symbol path generation without caching (baseline)
+  for (const size of DATA_SIZES) {
+    runner.benchmark(
+      'symbol path (uncached)',
+      'Symbol Caching',
+      () => {
+        // Simulate rendering N dots without caching
+        for (let i = 0; i < size; i++) {
+          const shape = D3_SHAPES[i % D3_SHAPES.length];
+          const symbolSize = SYMBOL_SIZES[i % SYMBOL_SIZES.length];
+          // Create a new symbol generator each time (the old approach)
+          const symbolGen = d3.symbol()
+            .type(d3[`symbol${shape}`])
+            .size((symbolSize * symbolSize) * Math.PI);
+          symbolGen();
+        }
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Symbol path generation with caching (optimized approach)
+  const symbolCache = new Map<string, string>();
+  function getCachedSymbolPath(shape: string, size: number): string {
+    const key = `${shape}-${size}`;
+    let path = symbolCache.get(key);
+    if (path === undefined) {
+      const symbolGen = d3.symbol()
+        .type(d3[`symbol${shape}`])
+        .size((size * size) * Math.PI);
+      path = symbolGen();
+      symbolCache.set(key, path);
+    }
+    return path;
+  }
+
+  for (const size of DATA_SIZES) {
+    // Clear cache before each size test for fair comparison
+    symbolCache.clear();
+    
+    runner.benchmark(
+      'symbol path (cached)',
+      'Symbol Caching',
+      () => {
+        // Simulate rendering N dots with caching
+        for (let i = 0; i < size; i++) {
+          const shape = D3_SHAPES[i % D3_SHAPES.length];
+          const symbolSize = SYMBOL_SIZES[i % SYMBOL_SIZES.length];
+          getCachedSymbolPath(shape, symbolSize);
+        }
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
   }
 
   // ============================================================================
