@@ -120,7 +120,9 @@ export function hashArray(arr: unknown[] | null | undefined): string {
         strValue = value > 0 ? 'Inf' : '-Inf';
       } else {
         // Use fixed precision to avoid floating point comparison issues
-        strValue = value.toFixed(10);
+        // 6 decimal places is sufficient for most SPC applications
+        // and avoids unnecessary hash differences for effectively equal numbers
+        strValue = value.toFixed(6);
       }
     } else if (typeof value === 'object') {
       strValue = JSON.stringify(value);
@@ -198,11 +200,11 @@ export function createDataState(
 /**
  * Create a settings state snapshot from current settings
  * 
- * @param settings - The settings object with all categories
+ * @param settings - The settings object with all categories (accepts any nested object structure)
  * @returns SettingsState snapshot
  */
-export function createSettingsState(
-  settings: Record<string, Record<string, unknown>>
+export function createSettingsState<T extends Record<string, unknown>>(
+  settings: T
 ): SettingsState {
   const categoryHashes = new Map<string, string>();
   

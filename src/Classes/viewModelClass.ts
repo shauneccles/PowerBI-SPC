@@ -245,9 +245,8 @@ export default class viewModelClass {
     }
 
     // Session 6: Create current settings state for change detection
-    const currentSettingsState = createSettingsState(
-      this.inputSettings.settings as unknown as Record<string, Record<string, unknown>>
-    );
+    // The settings object is typed as defaultSettingsType but is compatible with Record<string, unknown>
+    const currentSettingsState = createSettingsState(this.inputSettings.settings);
 
     // Only re-construct data and re-calculate limits if they have changed
     if (options.type === 2 || this.firstRun) {
