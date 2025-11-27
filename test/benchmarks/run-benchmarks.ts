@@ -81,15 +81,17 @@ function generateCountData(n: number, mean: number = 100, stddev: number = 10): 
   return generateData(n, mean, stddev).map(v => Math.max(1, Math.round(v)));
 }
 
-// Note: generateSDData and generateGroupSizes removed as s chart and xbar chart
-// benchmarks are skipped due to ts-node circular dependency issues.
-
 // ============================================================================
 // BENCHMARK CONFIGURATIONS
 // ============================================================================
 
 const STANDARD_ITERATIONS = 50;  // Increased from 20 for more stable results
 const DATA_SIZES = [10, 100, 500, 1000];
+const SVG_NS = 'http://www.w3.org/2000/svg';  // SVG namespace for DOM operations
+
+// Chart types skipped due to ts-node circular dependency issue with Constants.ts
+// These charts work correctly in karma/webpack tests
+const SKIPPED_CHARTS = ['s chart', 'xbar chart'];
 
 // ============================================================================
 // MAIN BENCHMARK SUITE
@@ -210,9 +212,8 @@ async function runBenchmarks() {
   }
 
   // 7. s chart benchmarks (Standard Deviation) - SKIPPED
-  // Note: Skipped due to circular dependency issue with ts-node when loading
-  // Constants.ts (c4, c5, b3, b4 functions). Works correctly in karma/webpack tests.
-  console.log('   ⚠️  Skipping s chart (ts-node circular dependency issue)');
+  // See SKIPPED_CHARTS constant for reason
+  console.log(`   ⚠️  Skipping ${SKIPPED_CHARTS[0]} (ts-node circular dependency issue)`);
 
   // 8. p' chart benchmarks (P-Prime)
   for (const size of DATA_SIZES) {
@@ -251,9 +252,8 @@ async function runBenchmarks() {
   }
 
   // 10. xbar chart benchmarks (Sample Means) - SKIPPED
-  // Note: Skipped due to circular dependency issue with ts-node when loading
-  // Constants.ts (a3 function uses c4). Works correctly in karma/webpack tests.
-  console.log('   ⚠️  Skipping xbar chart (ts-node circular dependency issue)');
+  // See SKIPPED_CHARTS constant for reason
+  console.log(`   ⚠️  Skipping ${SKIPPED_CHARTS[1]} (ts-node circular dependency issue)`);
 
   // 11. g chart benchmarks (Geometric)
   for (const size of DATA_SIZES) {
@@ -396,9 +396,9 @@ async function runBenchmarks() {
       'Rendering',
       () => {
         const svg = document.getElementById('chart');
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        const g = document.createElementNS(SVG_NS, 'g');
         for (let i = 0; i < size; i++) {
-          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          const circle = document.createElementNS(SVG_NS, 'circle');
           circle.setAttribute('cx', String(i * 10));
           circle.setAttribute('cy', String(Math.random() * 100));
           circle.setAttribute('r', '5');
@@ -440,7 +440,7 @@ async function runBenchmarks() {
     const svg = document.getElementById('chart');
     const elements: Element[] = [];
     for (let i = 0; i < size; i++) {
-      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      const circle = document.createElementNS(SVG_NS, 'circle');
       circle.setAttribute('cx', String(i * 10));
       circle.setAttribute('cy', '50');
       circle.setAttribute('r', '5');
@@ -486,7 +486,7 @@ async function runBenchmarks() {
         // Enter: create new elements if data is larger
         if (newData.length > existingElements.length) {
           for (let i = existingElements.length; i < newData.length; i++) {
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            const circle = document.createElementNS(SVG_NS, 'circle');
             circle.setAttribute('cx', String(i * 10));
             circle.setAttribute('cy', String(newData[i]));
             circle.setAttribute('r', '5');

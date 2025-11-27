@@ -22,7 +22,7 @@ export interface BenchmarkResult {
   stdDev: number;
   p95: number;           // 95th percentile
   p99: number;           // 99th percentile
-  memoryUsed?: number;   // Heap memory delta in bytes
+  memoryUsed?: number;   // Heap memory delta in bytes (can be negative due to GC)
 }
 
 export interface BenchmarkSuite {
@@ -96,6 +96,7 @@ export class BenchmarkRunner {
     }
 
     // Force garbage collection before memory measurement if available
+    // Note: Requires running Node with --expose-gc flag for gc() to be available
     if (typeof global !== 'undefined' && typeof global.gc === 'function') {
       global.gc();
     }

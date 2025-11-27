@@ -188,9 +188,9 @@ class BenchmarkHistory {
           result.min.toFixed(2),
           result.max.toFixed(2),
           result.stdDev.toFixed(2),
-          (result.p95 ?? 0).toFixed(2),
-          (result.p99 ?? 0).toFixed(2),
-          (result.memoryUsed ?? 0).toFixed(0)
+          result.p95 !== undefined ? result.p95.toFixed(2) : '',
+          result.p99 !== undefined ? result.p99.toFixed(2) : '',
+          result.memoryUsed !== undefined ? result.memoryUsed.toFixed(0) : ''
         ]);
       }
     }
