@@ -272,16 +272,14 @@ export class Visual implements powerbi.extensibility.IVisual {
       });
       
       // Session 9: Optimized dot highlighting using D3 data-driven updates
-      // This avoids manual DOM iteration and leverages D3's efficient batch processing
-      dotsSelection
-        .style("fill-opacity", (d: plotData) => {
-          const isSelected = identitySelectedWithCache(d.identity, selectedIdsSet);
-          return (isSelected || d.highlighted) ? d.aesthetics.opacity_selected : d.aesthetics.opacity_unselected;
-        })
-        .style("stroke-opacity", (d: plotData) => {
-          const isSelected = identitySelectedWithCache(d.identity, selectedIdsSet);
-          return (isSelected || d.highlighted) ? d.aesthetics.opacity_selected : d.aesthetics.opacity_unselected;
-        });
+      // Use .each() to compute selection state once, then apply both styles
+      dotsSelection.each(function(d: plotData) {
+        const isSelected = identitySelectedWithCache(d.identity, selectedIdsSet);
+        const opacity = (isSelected || d.highlighted) ? d.aesthetics.opacity_selected : d.aesthetics.opacity_unselected;
+        const element = d3.select(this);
+        element.style("fill-opacity", opacity);
+        element.style("stroke-opacity", opacity);
+      });
 
       // Session 9: Optimized table highlighting using D3 data-driven updates
       tableSelection

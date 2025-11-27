@@ -142,7 +142,7 @@ export function createSelectionIdSet(
 
 ### 2. Optimized `updateHighlighting` in `visual.ts`
 
-Refactored to use cached Set and D3 data-driven updates:
+Refactored to use cached Set and D3 `.each()` for efficient style updates:
 
 ```typescript
 updateHighlighting(): void {
@@ -153,16 +153,15 @@ updateHighlighting(): void {
   // ... default opacity setup ...
 
   if (anyHighlights || hasSelections || anyHighlightsGrouped) {
-    // Session 9: Optimized dot highlighting using D3 data-driven updates
-    dotsSelection
-      .style("fill-opacity", (d: plotData) => {
-        const isSelected = identitySelectedWithCache(d.identity, selectedIdsSet);
-        return (isSelected || d.highlighted) ? d.aesthetics.opacity_selected : d.aesthetics.opacity_unselected;
-      })
-      .style("stroke-opacity", (d: plotData) => {
-        const isSelected = identitySelectedWithCache(d.identity, selectedIdsSet);
-        return (isSelected || d.highlighted) ? d.aesthetics.opacity_selected : d.aesthetics.opacity_unselected;
-      });
+    // Session 9: Optimized dot highlighting using D3 .each()
+    // Compute selection state once per element, then apply both styles
+    dotsSelection.each(function(d: plotData) {
+      const isSelected = identitySelectedWithCache(d.identity, selectedIdsSet);
+      const opacity = (isSelected || d.highlighted) ? d.aesthetics.opacity_selected : d.aesthetics.opacity_unselected;
+      const element = d3.select(this);
+      element.style("fill-opacity", opacity);
+      element.style("stroke-opacity", opacity);
+    });
 
     // Session 9: Optimized table highlighting
     tableSelection
