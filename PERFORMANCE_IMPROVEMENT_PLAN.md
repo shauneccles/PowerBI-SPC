@@ -2,7 +2,11 @@
 
 ## Executive Summary
 
-This document outlines a comprehensive 5-session performance improvement plan for the PowerBI-SPC custom visual. The plan is based on analysis of the existing benchmark system and identification of key performance bottlenecks in the visual's architecture.
+This document outlines a comprehensive 10-session performance improvement plan for the PowerBI-SPC custom visual. The plan is based on analysis of the existing benchmark system and identification of key performance bottlenecks in the visual's architecture.
+
+**Sessions 1-5**: Core computational optimizations (limit calculations, outlier detection, D3 rendering, ViewModel processing) - **COMPLETED**
+
+**Sessions 6-10**: Advanced optimizations (change detection, virtualization, axis caching, selection optimization, Web Worker offloading) - **PLANNED**
 
 ### Current State Assessment
 
@@ -547,6 +551,466 @@ The symbol path cache stores pre-computed D3 symbol path strings, eliminating re
 
 ---
 
+## Session 6: Incremental Update & Change Detection
+
+### Objective
+Implement intelligent change detection to minimize unnecessary recalculations and re-renders when data or settings change, focusing on partial updates instead of full visual refresh.
+
+### Key Deliverables
+
+1. **Data Change Detection**
+   - Implement hash-based comparison for incoming data to detect actual changes
+   - Create diff algorithm to identify which data points changed between updates
+   - Cache previous data state for comparison
+
+2. **Settings Change Detection**
+   - Track which settings categories changed (spc, lines, scatter, etc.)
+   - Map settings changes to affected rendering functions
+   - Skip unaffected render stages when settings don't require full redraw
+
+3. **Selective Recalculation**
+   - Only recalculate control limits when numerator/denominator data changes
+   - Only re-run outlier detection when values or targets change
+   - Cache computed results that remain valid across updates
+
+4. **Render Batching**
+   - Batch multiple rapid updates into single render cycle
+   - Implement requestAnimationFrame-based render scheduling
+   - Add debouncing for resize events
+
+### Implementation Guidance
+
+```typescript
+// Change detection helper in viewModelClass.ts
+interface ChangeFlags {
+  dataChanged: boolean;
+  settingsChanged: Set<string>;
+  limitsNeedRecalc: boolean;
+  outliersNeedRecalc: boolean;
+  renderNeeded: Set<string>;  // 'dots', 'lines', 'axes', 'icons', etc.
+}
+
+function detectChanges(prev: DataState, current: DataState): ChangeFlags {
+  const flags: ChangeFlags = {
+    dataChanged: false,
+    settingsChanged: new Set(),
+    limitsNeedRecalc: false,
+    outliersNeedRecalc: false,
+    renderNeeded: new Set()
+  };
+  
+  // Fast hash comparison for data
+  if (hashArray(prev.numerators) !== hashArray(current.numerators)) {
+    flags.dataChanged = true;
+    flags.limitsNeedRecalc = true;
+    flags.outliersNeedRecalc = true;
+    flags.renderNeeded.add('dots').add('lines');
+  }
+  
+  // Settings comparison by category
+  for (const category of settingsCategories) {
+    if (!deepEqual(prev.settings[category], current.settings[category])) {
+      flags.settingsChanged.add(category);
+      flags.renderNeeded.add(settingsToRenderMap[category]);
+    }
+  }
+  
+  return flags;
+}
+```
+
+### Rationale
+- Power BI sends frequent update events even when data hasn't changed
+- Full recalculation on every update wastes CPU cycles
+- Selective rendering can dramatically reduce update latency
+- Sessions 1-5 optimized individual operations; Session 6 optimizes when operations run
+
+### Expected Impact
+| Scenario | Current | Target | Improvement |
+|----------|---------|--------|-------------|
+| Resize event | Full recalc | Scale only | 80% faster |
+| Style change | Full redraw | Partial update | 60% faster |
+| No data change | Full pipeline | Skip calc | 90% faster |
+
+---
+
+## Session 7: Summary Table Virtualization
+
+### Objective
+Implement virtual scrolling for the summary table to handle large datasets efficiently, rendering only visible rows.
+
+### Key Deliverables
+
+1. **Virtual Scroll Container**
+   - Implement viewport-based row rendering
+   - Render only visible rows plus small buffer
+   - Maintain scroll position and handle rapid scrolling
+
+2. **Row Pooling**
+   - Reuse DOM elements as user scrolls
+   - Avoid creating/destroying elements during scroll
+   - Pre-allocate row buffer pool
+
+3. **Efficient Data Binding**
+   - Update row content without recreating elements
+   - Cache row heights for consistent scrollbar
+   - Handle variable row heights if needed
+
+4. **Lazy Cell Rendering**
+   - Defer NHS icon SVG creation until row visible
+   - Cache rendered icons for reuse
+   - Progressive enhancement for complex cells
+
+### Implementation Guidance
+
+```typescript
+// Virtual table renderer
+class VirtualTable {
+  private rowPool: HTMLTableRowElement[] = [];
+  private visibleStartIdx: number = 0;
+  private visibleEndIdx: number = 0;
+  private rowHeight: number = 30;  // Estimated row height
+  private bufferSize: number = 5;   // Extra rows above/below viewport
+  
+  render(data: plotData[], container: HTMLElement, viewport: { top: number; height: number }) {
+    // Calculate visible range
+    const firstVisible = Math.max(0, Math.floor(viewport.top / this.rowHeight) - this.bufferSize);
+    const lastVisible = Math.min(data.length - 1, 
+                                  Math.ceil((viewport.top + viewport.height) / this.rowHeight) + this.bufferSize);
+    
+    // Recycle rows outside visible range
+    for (let i = this.visibleStartIdx; i < firstVisible; i++) {
+      this.recycleRow(i);
+    }
+    for (let i = lastVisible + 1; i <= this.visibleEndIdx; i++) {
+      this.recycleRow(i);
+    }
+    
+    // Render newly visible rows
+    for (let i = firstVisible; i <= lastVisible; i++) {
+      if (i < this.visibleStartIdx || i > this.visibleEndIdx) {
+        this.renderRow(i, data[i]);
+      }
+    }
+    
+    this.visibleStartIdx = firstVisible;
+    this.visibleEndIdx = lastVisible;
+    
+    // Set spacer height for scrollbar accuracy
+    const totalHeight = data.length * this.rowHeight;
+    container.style.height = `${totalHeight}px`;
+  }
+}
+```
+
+### Rationale
+- Summary tables with 1000+ rows cause significant DOM overhead
+- Current implementation creates all rows upfront
+- Virtual scrolling reduces DOM nodes from N to ~50 (visible + buffer)
+- Essential for responsive interaction with large datasets
+
+### Expected Impact
+| Data Size | Current DOM Nodes | Virtual DOM Nodes | Memory Saved |
+|-----------|-------------------|-------------------|--------------|
+| 100 rows | ~400 | ~100 | 75% |
+| 1000 rows | ~4000 | ~100 | 97% |
+| 5000 rows | ~20000 | ~100 | 99.5% |
+
+---
+
+## Session 8: Axis Rendering Optimization
+
+### Objective
+Optimize axis rendering through tick caching, label pooling, and efficient tick format calculation.
+
+### Key Deliverables
+
+1. **Tick Label Caching**
+   - Cache tick label lookup in drawXAxis (currently O(n) filter per tick)
+   - Convert tickLabels array to Map for O(1) lookup
+   - Pre-compute formatted tick strings
+
+2. **Axis Scale Caching**
+   - Cache scale domain/range when unchanged
+   - Avoid recreating d3.scale objects on every render
+   - Share scale calculations between X and Y axes where applicable
+
+3. **Label Formatting Optimization**
+   - Cache toFixed() results for Y-axis percentage labels
+   - Pre-format tick values during data processing
+   - Avoid repeated string concatenation in tight loops
+
+4. **DOM Update Minimization**
+   - Use D3 key functions for efficient tick updates
+   - Batch attribute changes
+   - Skip redundant style applications
+
+### Implementation Guidance
+
+```typescript
+// Cached tick label lookup in drawXAxis.ts
+// BEFORE: O(n) filter per tick
+xAxis.tickFormat(axisX => {
+  const targetKey = visualObj.viewModel.tickLabels.filter(d => d.x == <number>axisX);
+  return targetKey.length > 0 ? targetKey[0].label : "";
+});
+
+// AFTER: O(1) Map lookup
+// Pre-build map in viewModel during data processing
+const tickLabelMap = new Map<number, string>();
+for (const tick of tickLabels) {
+  tickLabelMap.set(tick.x, tick.label);
+}
+
+// Use in axis render
+xAxis.tickFormat(axisX => tickLabelMap.get(axisX as number) ?? "");
+
+// Y-axis format caching
+// BEFORE: toFixed() called per tick on every render
+yAxis.tickFormat((d: number) => d.toFixed(sig_figs) + (percentLabels ? "%" : ""));
+
+// AFTER: Pre-computed format function with cached suffix
+const suffix = percentLabels ? "%" : "";
+const cachedFormat = (d: number) => d.toFixed(sig_figs) + suffix;
+yAxis.tickFormat(cachedFormat);
+```
+
+### Rationale
+- Axis rendering occurs on every visual update
+- Current tick label lookup is O(n) per tick, O(n×m) total
+- Axes are typically static relative to data changes
+- Small optimizations here compound across frequent updates
+
+### Expected Impact
+| Operation | Current | Target | Improvement |
+|-----------|---------|--------|-------------|
+| X-axis tick format | O(n×m) | O(m) | ~10x faster |
+| Y-axis label format | New each render | Cached | 50% faster |
+| Full axis render | ~5ms | ~1ms | 80% faster |
+
+---
+
+## Session 9: Selection & Highlighting Optimization
+
+### Objective
+Optimize the selection and highlighting system to reduce DOM queries and style updates during user interactions.
+
+### Key Deliverables
+
+1. **Selection State Caching**
+   - Cache current selection IDs in efficient data structure
+   - Avoid repeated getSelectionIds() calls during highlight updates
+   - Implement dirty flag for selection changes
+
+2. **Efficient DOM Traversal**
+   - Replace selectAll().nodes().forEach() with data-driven updates
+   - Use CSS classes for highlight states instead of inline styles
+   - Leverage D3 selection caching
+
+3. **Batch Style Updates**
+   - Group opacity changes by element type
+   - Use CSS custom properties for theme-based styling
+   - Minimize style recalculation triggers
+
+4. **Event Handler Optimization**
+   - Debounce highlight updates during rapid selections
+   - Cache frequently accessed DOM references
+   - Use passive event listeners where applicable
+
+### Implementation Guidance
+
+```typescript
+// BEFORE: O(n) DOM traversal with individual style updates
+updateHighlighting(): void {
+  dotsSelection.nodes().forEach(currentDotNode => {
+    const dot: plotData = d3.select(currentDotNode).datum() as plotData;
+    const currentPointSelected = identitySelected(dot.identity, this.selectionManager);
+    const newOpacity = currentPointSelected ? dot.aesthetics.opacity_selected : dot.aesthetics.opacity_unselected;
+    d3.select(currentDotNode).style("fill-opacity", newOpacity);
+    d3.select(currentDotNode).style("stroke-opacity", newOpacity);
+  });
+}
+
+// AFTER: Single D3 selection with data-driven update
+updateHighlighting(): void {
+  // Cache selection IDs as Set for O(1) lookup
+  const selectedIds = new Set(this.selectionManager.getSelectionIds().map(id => id.key));
+  
+  // Single D3 selection update - let D3 handle DOM efficiently
+  this.svg.selectAll(".dotsgroup path")
+    .style("fill-opacity", (d: plotData) => 
+      this.shouldHighlight(d, selectedIds) ? d.aesthetics.opacity_selected : d.aesthetics.opacity_unselected
+    )
+    .style("stroke-opacity", (d: plotData) =>
+      this.shouldHighlight(d, selectedIds) ? d.aesthetics.opacity_selected : d.aesthetics.opacity_unselected
+    );
+}
+
+// Use CSS classes for common highlight states
+// In CSS:
+// .highlight-selected { opacity: 1; }
+// .highlight-unselected { opacity: 0.2; }
+
+// In JS:
+dotsSelection.classed("highlight-selected", d => selectedIds.has(d.identity.key))
+             .classed("highlight-unselected", d => !selectedIds.has(d.identity.key) && hasSelection);
+```
+
+### Rationale
+- Highlighting is triggered on every click/hover interaction
+- Current implementation iterates all DOM nodes individually
+- CSS class-based styling leverages browser optimization
+- D3's data-driven approach is more efficient than manual iteration
+
+### Expected Impact
+| Selection Size | Current Update Time | Target | Improvement |
+|----------------|---------------------|--------|-------------|
+| Single point | ~8ms | ~2ms | 75% faster |
+| Multiple points | ~20ms | ~3ms | 85% faster |
+| Clear selection | ~15ms | ~2ms | 87% faster |
+
+---
+
+## Session 10: Web Worker Offloading
+
+### Objective
+Move computationally intensive operations to a Web Worker to keep the main thread responsive during heavy calculations.
+
+### Key Deliverables
+
+1. **Worker Setup**
+   - Create dedicated calculation worker
+   - Implement message-based communication protocol
+   - Handle worker initialization and termination
+
+2. **Limit Calculation Offloading**
+   - Move all limit calculation functions to worker
+   - Implement data transfer optimization (Transferable objects)
+   - Handle async calculation results
+
+3. **Outlier Detection Offloading**
+   - Move outlier detection algorithms to worker
+   - Batch multiple detection rules in single worker call
+   - Cache worker results for quick re-display
+
+4. **Progress Reporting**
+   - Report calculation progress for large datasets
+   - Enable cancellation of long-running calculations
+   - Graceful degradation for unsupported environments
+
+### Implementation Guidance
+
+```typescript
+// calculation.worker.ts
+import iLimits from "../Limit Calculations/i";
+import astronomical from "../Outlier Flagging/astronomical";
+// ... other imports
+
+interface WorkerMessage {
+  type: 'calculateLimits' | 'detectOutliers';
+  payload: any;
+  requestId: string;
+}
+
+self.onmessage = (event: MessageEvent<WorkerMessage>) => {
+  const { type, payload, requestId } = event.data;
+  
+  try {
+    let result;
+    switch (type) {
+      case 'calculateLimits':
+        result = calculateLimits(payload.chartType, payload.args);
+        break;
+      case 'detectOutliers':
+        result = detectOutliers(payload.values, payload.limits, payload.settings);
+        break;
+    }
+    
+    self.postMessage({ requestId, success: true, result });
+  } catch (error) {
+    self.postMessage({ requestId, success: false, error: error.message });
+  }
+};
+
+// viewModelClass.ts - Worker usage
+class viewModelClass {
+  private calculationWorker: Worker;
+  private pendingCalculations: Map<string, Promise<any>>;
+  
+  constructor() {
+    if (typeof Worker !== 'undefined') {
+      this.calculationWorker = new Worker('./calculation.worker.js');
+      this.calculationWorker.onmessage = this.handleWorkerMessage.bind(this);
+    }
+  }
+  
+  async calculateLimitsAsync(chartType: string, args: controlLimitsArgs): Promise<controlLimitsObject> {
+    if (!this.calculationWorker) {
+      // Fallback to synchronous calculation
+      return this.calculateLimitsSync(chartType, args);
+    }
+    
+    const requestId = crypto.randomUUID();
+    return new Promise((resolve, reject) => {
+      this.pendingCalculations.set(requestId, { resolve, reject });
+      this.calculationWorker.postMessage({
+        type: 'calculateLimits',
+        payload: { chartType, args },
+        requestId
+      });
+    });
+  }
+}
+```
+
+### Rationale
+- Large dataset calculations can block the main thread for 100ms+
+- Blocked main thread causes UI freezing and poor user experience
+- Web Workers enable parallel computation without UI impact
+- Power BI visuals benefit from responsive interactions during data updates
+
+### Expected Impact
+| Dataset Size | Main Thread Block (Current) | With Worker | UI Responsiveness |
+|--------------|----------------------------|-------------|-------------------|
+| 500 points | ~50ms | ~5ms | 90% improvement |
+| 1000 points | ~150ms | ~10ms | 93% improvement |
+| 5000 points | ~500ms | ~15ms | 97% improvement |
+
+### Considerations
+- Workers have initialization overhead (~10ms)
+- Data serialization has cost for large datasets
+- Fallback needed for environments without Worker support
+- Power BI's sandboxed environment may require special handling
+
+---
+
+## Extended Performance Targets (Sessions 6-10)
+
+### Update Latency Targets
+| Update Type | Current | Session 6-10 Target | Improvement |
+|-------------|---------|---------------------|-------------|
+| Data refresh (1000 pts) | ~200ms | <50ms | 75% |
+| Resize event | ~100ms | <20ms | 80% |
+| Style-only change | ~150ms | <30ms | 80% |
+| Selection update | ~20ms | <5ms | 75% |
+
+### Memory Efficiency Targets
+| Scenario | Current | Target | Reduction |
+|----------|---------|--------|-----------|
+| Summary table (1000 rows) | ~8MB | <1MB | 87% |
+| Large dataset render | ~15MB | <5MB | 67% |
+| Peak during update | ~25MB | <10MB | 60% |
+
+### User Experience Targets
+| Metric | Current | Target |
+|--------|---------|--------|
+| Time to interactive | ~300ms | <100ms |
+| Scroll jank (summary table) | Frequent | Rare |
+| Selection response time | ~20ms | <5ms |
+| Resize smoothness | Choppy | Smooth |
+
+---
+
 ## Document History
 
 | Version | Date | Author | Changes |
@@ -556,4 +1020,5 @@ The symbol path cache stores pre-computed D3 symbol path strings, eliminating re
 | 1.2 | 2025-11-27 | Performance Agent | Session 2 completion, significant limit calculation optimizations |
 | 1.3 | 2025-11-27 | Performance Agent | Session 3 completion, outlier detection optimizations with sliding window |
 | 1.4 | 2025-11-27 | Performance Agent | Session 4 completion, D3 rendering pipeline optimizations with symbol caching |
-| 1.5 | 2025-11-27 | Performance Agent | Session 5 completion, ViewModel data processing optimizations | |
+| 1.5 | 2025-11-27 | Performance Agent | Session 5 completion, ViewModel data processing optimizations |
+| 1.6 | 2025-11-27 | Performance Agent | Added Sessions 6-10 plans: incremental updates, virtualization, axis optimization, selection optimization, Web Worker offloading |
