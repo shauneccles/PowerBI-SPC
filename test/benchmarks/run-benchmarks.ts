@@ -1023,10 +1023,13 @@ async function runBenchmarks() {
       'Axis Rendering',
       () => {
         // OLD approach: O(n) filter per tick
+        // Assign result to prevent JIT optimization from eliminating the computation
+        let result = "";
         for (const axisX of tickValues) {
           const targetKey = tickLabels.filter(d => d.x === axisX);
-          targetKey.length > 0 ? targetKey[0].label : "";
+          result = targetKey.length > 0 ? targetKey[0].label : "";
         }
+        return result;
       },
       { iterations: STANDARD_ITERATIONS, dataPoints: size }
     );
@@ -1049,9 +1052,12 @@ async function runBenchmarks() {
       'Axis Rendering',
       () => {
         // NEW approach: O(1) Map lookup per tick
+        // Assign result to prevent JIT optimization from eliminating the computation
+        let result = "";
         for (const axisX of tickValues) {
-          tickLabelMap.get(axisX) ?? "";
+          result = tickLabelMap.get(axisX) ?? "";
         }
+        return result;
       },
       { iterations: STANDARD_ITERATIONS, dataPoints: size }
     );
@@ -1069,9 +1075,12 @@ async function runBenchmarks() {
       'Axis Rendering',
       () => {
         // OLD approach: evaluate condition per tick
+        // Assign result to prevent JIT optimization from eliminating the computation
+        let result = "";
         for (const d of tickValues) {
-          percentLabels ? d.toFixed(sig_figs) + "%" : d.toFixed(sig_figs);
+          result = percentLabels ? d.toFixed(sig_figs) + "%" : d.toFixed(sig_figs);
         }
+        return result;
       },
       { iterations: STANDARD_ITERATIONS, dataPoints: size }
     );
@@ -1091,9 +1100,12 @@ async function runBenchmarks() {
       'Axis Rendering',
       () => {
         // NEW approach: use pre-computed suffix
+        // Assign result to prevent JIT optimization from eliminating the computation
+        let result = "";
         for (const d of tickValues) {
-          d.toFixed(sig_figs) + suffix;
+          result = d.toFixed(sig_figs) + suffix;
         }
+        return result;
       },
       { iterations: STANDARD_ITERATIONS, dataPoints: size }
     );
