@@ -855,6 +855,138 @@ async function runBenchmarks() {
   }
 
   // ============================================================================
+  // SUMMARY TABLE VIRTUALIZATION BENCHMARKS (Session 7)
+  // ============================================================================
+
+  console.log('📊 Benchmarking Summary Table Virtualization (Session 7)...');
+
+  // Import VirtualTable utilities
+  const { VirtualTable, shouldUseVirtualization, VIRTUALIZATION_CONFIG } = await import('../../src/D3 Plotting Functions');
+
+  // Benchmark shouldUseVirtualization check
+  for (const size of DATA_SIZES) {
+    runner.benchmark(
+      'shouldUseVirtualization',
+      'Summary Table Virtualization',
+      () => shouldUseVirtualization(size),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark VirtualTable instantiation
+  runner.benchmark(
+    'VirtualTable instantiation',
+    'Summary Table Virtualization',
+    () => {
+      const vt = new VirtualTable(VIRTUALIZATION_CONFIG);
+      return vt;
+    },
+    { iterations: STANDARD_ITERATIONS, dataPoints: 1 }
+  );
+
+  // Benchmark VirtualTable state access
+  const vtForStateAccess = new VirtualTable(VIRTUALIZATION_CONFIG);
+  runner.benchmark(
+    'VirtualTable getState',
+    'Summary Table Virtualization',
+    () => vtForStateAccess.getState(),
+    { iterations: STANDARD_ITERATIONS, dataPoints: 1 }
+  );
+
+  // Benchmark VirtualTable config access
+  runner.benchmark(
+    'VirtualTable getConfig',
+    'Summary Table Virtualization',
+    () => vtForStateAccess.getConfig(),
+    { iterations: STANDARD_ITERATIONS, dataPoints: 1 }
+  );
+
+  // Benchmark row visibility calculation (simulating scroll)
+  // This tests the core logic of determining which rows to render
+  for (const size of DATA_SIZES) {
+    const rowHeight = 32;
+    const bufferSize = 5;
+    const containerHeight = 400;  // Typical viewport height
+    
+    runner.benchmark(
+      'row visibility calculation',
+      'Summary Table Virtualization',
+      () => {
+        let lastResult = { firstVisible: 0, lastVisible: 0 };
+        // Simulate scrolling to different positions
+        for (let scrollTop = 0; scrollTop < size * rowHeight; scrollTop += containerHeight) {
+          const firstVisible = Math.max(0, Math.floor(scrollTop / rowHeight) - bufferSize);
+          const lastVisible = Math.min(
+            size - 1,
+            Math.ceil((scrollTop + containerHeight) / rowHeight) + bufferSize
+          );
+          lastResult = { firstVisible, lastVisible };
+        }
+        return lastResult;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark DOM row creation (simulating row pool allocation)
+  for (const size of DATA_SIZES) {
+    // Only render visible rows (limited set)
+    const visibleRows = Math.min(30, size);  // ~30 visible rows typical
+    
+    runner.benchmark(
+      'virtual row DOM creation',
+      'Summary Table Virtualization',
+      () => {
+        const rows: HTMLTableRowElement[] = [];
+        for (let i = 0; i < visibleRows; i++) {
+          const row = document.createElementNS('http://www.w3.org/1999/xhtml', 'tr') as HTMLTableRowElement;
+          (row as any)._dataIndex = i;
+          rows.push(row);
+        }
+        return rows;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark traditional approach (create all rows) vs virtual approach (create visible only)
+  // This demonstrates the performance benefit of virtualization
+  for (const size of DATA_SIZES) {
+    // Traditional: create all rows
+    runner.benchmark(
+      'traditional row creation (all)',
+      'Summary Table Virtualization',
+      () => {
+        const rows: HTMLTableRowElement[] = [];
+        for (let i = 0; i < size; i++) {
+          const row = document.createElementNS('http://www.w3.org/1999/xhtml', 'tr') as HTMLTableRowElement;
+          row.innerHTML = `<td>${i}</td><td>Value ${i}</td>`;
+          rows.push(row);
+        }
+        return rows;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+
+    // Virtual: only visible rows (~30)
+    const visibleCount = Math.min(30, size);
+    runner.benchmark(
+      'virtual row creation (visible)',
+      'Summary Table Virtualization',
+      () => {
+        const rows: HTMLTableRowElement[] = [];
+        for (let i = 0; i < visibleCount; i++) {
+          const row = document.createElementNS('http://www.w3.org/1999/xhtml', 'tr') as HTMLTableRowElement;
+          row.innerHTML = `<td>${i}</td><td>Value ${i}</td>`;
+          rows.push(row);
+        }
+        return rows;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // ============================================================================
   // SAVE RESULTS
   // ============================================================================
 
