@@ -1132,6 +1132,171 @@ async function runBenchmarks() {
   }
 
   // ============================================================================
+  // SELECTION & HIGHLIGHTING BENCHMARKS (Session 9)
+  // ============================================================================
+
+  console.log('📊 Benchmarking Selection & Highlighting (Session 9)...');
+
+  // Import selection optimization functions
+  const { identitySelectedWithCache, createSelectionIdSet } = await import('../../src/Functions/identitySelected');
+
+  // Create mock selection IDs for benchmarking
+  function createMockSelectionIds(n: number): { selected: Set<any>, allIds: any[] } {
+    // Create array of mock IDs
+    const allIds = Array.from({ length: n }, (_, i) => ({ key: `id-${i}`, identity: i }));
+    // Select ~10% of items
+    const selectedCount = Math.max(1, Math.floor(n / 10));
+    const selected = new Set(allIds.slice(0, selectedCount));
+    return { selected, allIds };
+  }
+
+  // Benchmark: Create selection ID Set (one-time cost)
+  for (const size of DATA_SIZES) {
+    const mockIds = Array.from({ length: size }, (_, i) => ({ key: `id-${i}` }));
+    const mockSelectionManager = {
+      getSelectionIds: () => mockIds.slice(0, Math.floor(size / 10))  // 10% selected
+    } as any;
+
+    runner.benchmark(
+      'createSelectionIdSet',
+      'Selection & Highlighting',
+      () => createSelectionIdSet(mockSelectionManager),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark: OLD approach - call getSelectionIds() per element (simulated)
+  for (const size of DATA_SIZES) {
+    const { selected, allIds } = createMockSelectionIds(size);
+    
+    // Simulate old approach: convert array to array and linear search each time
+    const selectedArray = Array.from(selected);
+    
+    runner.benchmark(
+      'identity check (old - per element)',
+      'Selection & Highlighting',
+      () => {
+        let result = false;
+        // Simulate checking each element with O(n) lookup
+        for (let i = 0; i < allIds.length; i++) {
+          // Simulates the old approach: linear search through selection array
+          for (const sel of selectedArray) {
+            if (sel === allIds[i]) {
+              result = true;
+              break;
+            }
+          }
+        }
+        return result;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark: NEW approach - use Set for O(1) lookup
+  for (const size of DATA_SIZES) {
+    const { selected, allIds } = createMockSelectionIds(size);
+
+    runner.benchmark(
+      'identity check (new - Set lookup)',
+      'Selection & Highlighting',
+      () => {
+        let result = false;
+        // New approach: O(1) Set lookup
+        for (let i = 0; i < allIds.length; i++) {
+          if (selected.has(allIds[i])) {
+            result = true;
+          }
+        }
+        return result;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark: identitySelectedWithCache function (actual implementation)
+  for (const size of DATA_SIZES) {
+    const { selected, allIds } = createMockSelectionIds(size);
+
+    runner.benchmark(
+      'identitySelectedWithCache',
+      'Selection & Highlighting',
+      () => {
+        let result = false;
+        for (let i = 0; i < allIds.length; i++) {
+          if (identitySelectedWithCache(allIds[i] as any, selected as any)) {
+            result = true;
+          }
+        }
+        return result;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark: Full highlighting update simulation (OLD vs NEW pattern)
+  for (const size of DATA_SIZES) {
+    const { selected, allIds } = createMockSelectionIds(size);
+    const selectedArray = Array.from(selected);
+    
+    // Create mock plot data with aesthetics
+    const plotData = allIds.map((id) => ({
+      identity: id,
+      highlighted: false,
+      aesthetics: {
+        opacity_selected: 1.0,
+        opacity_unselected: 0.2
+      }
+    }));
+
+    // OLD approach: nodes().forEach() with per-element API calls
+    runner.benchmark(
+      'highlighting update (old pattern)',
+      'Selection & Highlighting',
+      () => {
+        const results: number[] = [];
+        // Simulate nodes().forEach() pattern
+        for (let i = 0; i < plotData.length; i++) {
+          const d = plotData[i];
+          // Simulate per-element selection check (linear search)
+          let isSelected = false;
+          for (const sel of selectedArray) {
+            if (sel === d.identity) {
+              isSelected = true;
+              break;
+            }
+          }
+          const opacity = (isSelected || d.highlighted) 
+            ? d.aesthetics.opacity_selected 
+            : d.aesthetics.opacity_unselected;
+          results.push(opacity);
+        }
+        return results;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+
+    // NEW approach: D3-style data-driven with cached Set
+    runner.benchmark(
+      'highlighting update (new pattern)',
+      'Selection & Highlighting',
+      () => {
+        // Pre-create Set once (simulating createSelectionIdSet)
+        // In real code this is done once before the loop
+        const results = plotData.map(d => {
+          // O(1) Set lookup
+          const isSelected = selected.has(d.identity);
+          return (isSelected || d.highlighted) 
+            ? d.aesthetics.opacity_selected 
+            : d.aesthetics.opacity_unselected;
+        });
+        return results;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // ============================================================================
   // SAVE RESULTS
   // ============================================================================
 

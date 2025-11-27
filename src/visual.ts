@@ -10,7 +10,7 @@ import { drawXAxis, drawYAxis, drawTooltipLine, drawLines,
           drawValueLabels, drawLineLabels } from "./D3 Plotting Functions"
 import { plotPropertiesClass, viewModelClass, type plotData, type viewModelValidationT } from "./Classes"
 import type { lineData, plotDataGrouped } from "./Classes/viewModelClass";
-import { getAesthetic, identitySelected, type ChangeFlags } from "./Functions";
+import { getAesthetic, identitySelected, identitySelectedWithCache, createSelectionIdSet, type ChangeFlags } from "./Functions";
 
 export type svgBaseType = d3.Selection<SVGSVGElement, unknown, null, undefined>;
 export type divBaseType = d3.Selection<HTMLDivElement, unknown, null, undefined>;
@@ -234,10 +234,21 @@ export class Visual implements powerbi.extensibility.IVisual {
     }
   }
 
+  /**
+   * Session 9: Optimized highlighting update using cached selection IDs and data-driven D3 updates
+   * 
+   * Performance optimizations:
+   * 1. Create selection ID Set once for O(1) lookups (vs calling getSelectionIds() per element)
+   * 2. Use D3 data-driven updates instead of manual DOM iteration
+   * 3. Single style update calls using D3's batch processing
+   */
   updateHighlighting(): void {
     const anyHighlights: boolean = this.viewModel.inputData ? this.viewModel.inputData.anyHighlights : false;
     const anyHighlightsGrouped: boolean = this.viewModel.inputDataGrouped ? this.viewModel.inputDataGrouped.some(d => d.anyHighlights) : false;
-    const allSelectionIDs: ISelectionId[] = this.selectionManager.getSelectionIds() as ISelectionId[];
+    
+    // Session 9: Create selection ID Set once for O(1) lookups
+    const selectedIdsSet: Set<ISelectionId> = createSelectionIdSet(this.selectionManager);
+    const hasSelections: boolean = selectedIdsSet.size > 0;
 
     const dotsSelection = this.svg.selectAll(".dotsgroup").selectChildren();
     const linesSelection = this.svg.selectAll(".linesgroup").selectChildren();
@@ -251,26 +262,33 @@ export class Visual implements powerbi.extensibility.IVisual {
     dotsSelection.style("stroke-opacity", (d: plotData) => d.aesthetics.opacity);
     tableSelection.style("opacity", (d: plotData) => d.aesthetics["table_opacity"]);
 
-    if (anyHighlights || (allSelectionIDs.length > 0) || anyHighlightsGrouped) {
+    if (anyHighlights || hasSelections || anyHighlightsGrouped) {
+      // Session 9: Use cached settings reference for opacity lookup
+      const settings = this.viewModel.inputSettings.settings;
+      
+      // Update lines opacity using data-driven D3 update
       linesSelection.style("stroke-opacity", (d: [string, lineData[]]) => {
-        return getAesthetic(d[0], "lines", "opacity_unselected", this.viewModel.inputSettings.settings)
+        return getAesthetic(d[0], "lines", "opacity_unselected", settings)
       });
-      dotsSelection.nodes().forEach(currentDotNode => {
-        const dot: plotData = d3.select(currentDotNode).datum() as plotData;
-        const currentPointSelected: boolean = identitySelected(dot.identity, this.selectionManager);
-        const currentPointHighlighted: boolean = dot.highlighted;
-        const newDotOpacity: number = (currentPointSelected || currentPointHighlighted) ? dot.aesthetics.opacity_selected  : dot.aesthetics.opacity_unselected;
-        d3.select(currentDotNode).style("fill-opacity", newDotOpacity);
-        d3.select(currentDotNode).style("stroke-opacity", newDotOpacity);
-      })
+      
+      // Session 9: Optimized dot highlighting using D3 data-driven updates
+      // This avoids manual DOM iteration and leverages D3's efficient batch processing
+      dotsSelection
+        .style("fill-opacity", (d: plotData) => {
+          const isSelected = identitySelectedWithCache(d.identity, selectedIdsSet);
+          return (isSelected || d.highlighted) ? d.aesthetics.opacity_selected : d.aesthetics.opacity_unselected;
+        })
+        .style("stroke-opacity", (d: plotData) => {
+          const isSelected = identitySelectedWithCache(d.identity, selectedIdsSet);
+          return (isSelected || d.highlighted) ? d.aesthetics.opacity_selected : d.aesthetics.opacity_unselected;
+        });
 
-      tableSelection.nodes().forEach(currentTableNode => {
-        const dot: plotDataGrouped = d3.select(currentTableNode).datum() as plotDataGrouped;
-        const currentPointSelected: boolean = identitySelected(dot.identity, this.selectionManager);
-        const currentPointHighlighted: boolean = dot.highlighted;
-        const newTableOpacity: number = (currentPointSelected || currentPointHighlighted) ? dot.aesthetics["table_opacity_selected"] : dot.aesthetics["table_opacity_unselected"];
-        d3.select(currentTableNode).style("opacity", newTableOpacity);
-      })
+      // Session 9: Optimized table highlighting using D3 data-driven updates
+      tableSelection
+        .style("opacity", (d: plotDataGrouped) => {
+          const isSelected = identitySelectedWithCache(d.identity, selectedIdsSet);
+          return (isSelected || d.highlighted) ? d.aesthetics["table_opacity_selected"] : d.aesthetics["table_opacity_unselected"];
+        });
     }
   }
 
