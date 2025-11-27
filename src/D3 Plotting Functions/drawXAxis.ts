@@ -10,12 +10,16 @@ export default function drawXAxis(selection: svgBaseType, visualObj: Visual) {
     if (xAxisProperties.tick_count) {
       xAxis.ticks(xAxisProperties.tick_count)
     }
-    if (visualObj.viewModel.tickLabels) {
-      xAxis.tickFormat(axisX => {
-        const targetKey = visualObj.viewModel.tickLabels.filter(d => d.x == <number>axisX);
-        return targetKey.length > 0 ? targetKey[0].label : "";
-
-      })
+    // Session 8 Optimization: Use pre-computed Map for O(1) lookup instead of O(n) filter
+    // BEFORE: O(n) filter per tick, O(n×m) total for m ticks
+    //   xAxis.tickFormat(axisX => {
+    //     const targetKey = visualObj.viewModel.tickLabels.filter(d => d.x == <number>axisX);
+    //     return targetKey.length > 0 ? targetKey[0].label : "";
+    //   })
+    // AFTER: O(1) Map lookup per tick, O(m) total for m ticks
+    if (visualObj.viewModel.tickLabelMap) {
+      const tickLabelMap = visualObj.viewModel.tickLabelMap;
+      xAxis.tickFormat(axisX => tickLabelMap.get(axisX as number) ?? "");
     }
   } else {
     xAxis.tickValues([]);

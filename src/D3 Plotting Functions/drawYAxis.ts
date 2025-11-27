@@ -15,13 +15,17 @@ export default function drawYAxis(selection: svgBaseType, visualObj: Visual) {
       yAxis.ticks(yAxisProperties.tick_count)
     }
     if (visualObj.viewModel.inputData) {
-      yAxis.tickFormat(
-        (d: number) => {
-          return visualObj.viewModel.inputSettings.derivedSettings.percentLabels
-            ? d.toFixed(sig_figs) + "%"
-            : d.toFixed(sig_figs);
-        }
-      );
+      // Session 8 Optimization: Cache the suffix string and create format function once
+      // BEFORE: Evaluated percentLabels condition for every tick:
+      //   yAxis.tickFormat((d: number) => {
+      //     return visualObj.viewModel.inputSettings.derivedSettings.percentLabels
+      //       ? d.toFixed(sig_figs) + "%"
+      //       : d.toFixed(sig_figs);
+      //   });
+      // AFTER: Pre-compute suffix once and use cached format function
+      const percentLabels = visualObj.viewModel.inputSettings.derivedSettings.percentLabels;
+      const suffix = percentLabels ? "%" : "";
+      yAxis.tickFormat((d: number) => d.toFixed(sig_figs) + suffix);
     }
   } else {
     yAxis.tickValues([]);

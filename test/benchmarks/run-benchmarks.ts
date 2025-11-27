@@ -1001,6 +1001,137 @@ async function runBenchmarks() {
   }
 
   // ============================================================================
+  // AXIS RENDERING BENCHMARKS (Session 8)
+  // ============================================================================
+
+  console.log('📊 Benchmarking Axis Rendering (Session 8)...');
+
+  // Benchmark X-axis tick label lookup - OLD approach (O(n) filter per tick)
+  for (const size of DATA_SIZES) {
+    // Create tick labels array similar to viewModel.tickLabels
+    const tickLabels = Array.from({ length: size }, (_, i) => ({
+      x: i,
+      label: `Point ${i + 1}`
+    }));
+    
+    // Simulate typical number of ticks rendered on axis (usually 5-15)
+    const numTicks = Math.min(10, Math.ceil(size / 10));
+    const tickValues = Array.from({ length: numTicks }, (_, i) => Math.floor(i * size / numTicks));
+
+    runner.benchmark(
+      'X-axis tick lookup (filter)',
+      'Axis Rendering',
+      () => {
+        // OLD approach: O(n) filter per tick
+        // Assign result to prevent JIT optimization from eliminating the computation
+        let result = "";
+        for (const axisX of tickValues) {
+          const targetKey = tickLabels.filter(d => d.x === axisX);
+          result = targetKey.length > 0 ? targetKey[0].label : "";
+        }
+        return result;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark X-axis tick label lookup - NEW approach (O(1) Map lookup)
+  for (const size of DATA_SIZES) {
+    // Create tick label Map similar to viewModel.tickLabelMap
+    const tickLabelMap = new Map<number, string>();
+    for (let i = 0; i < size; i++) {
+      tickLabelMap.set(i, `Point ${i + 1}`);
+    }
+    
+    // Simulate typical number of ticks rendered on axis
+    const numTicks = Math.min(10, Math.ceil(size / 10));
+    const tickValues = Array.from({ length: numTicks }, (_, i) => Math.floor(i * size / numTicks));
+
+    runner.benchmark(
+      'X-axis tick lookup (Map)',
+      'Axis Rendering',
+      () => {
+        // NEW approach: O(1) Map lookup per tick
+        // Assign result to prevent JIT optimization from eliminating the computation
+        let result = "";
+        for (const axisX of tickValues) {
+          result = tickLabelMap.get(axisX) ?? "";
+        }
+        return result;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark Y-axis format - OLD approach (conditional per tick)
+  for (const size of DATA_SIZES) {
+    const numTicks = 10;  // Typical Y-axis tick count
+    const tickValues = Array.from({ length: numTicks }, (_, i) => i * 10 + Math.random());
+    const sig_figs = 2;
+    const percentLabels = true;
+
+    runner.benchmark(
+      'Y-axis format (conditional)',
+      'Axis Rendering',
+      () => {
+        // OLD approach: evaluate condition per tick
+        // Assign result to prevent JIT optimization from eliminating the computation
+        let result = "";
+        for (const d of tickValues) {
+          result = percentLabels ? d.toFixed(sig_figs) + "%" : d.toFixed(sig_figs);
+        }
+        return result;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark Y-axis format - NEW approach (cached suffix)
+  for (const size of DATA_SIZES) {
+    const numTicks = 10;  // Typical Y-axis tick count
+    const tickValues = Array.from({ length: numTicks }, (_, i) => i * 10 + Math.random());
+    const sig_figs = 2;
+    const percentLabels = true;
+    // Pre-compute suffix
+    const suffix = percentLabels ? "%" : "";
+
+    runner.benchmark(
+      'Y-axis format (cached suffix)',
+      'Axis Rendering',
+      () => {
+        // NEW approach: use pre-computed suffix
+        // Assign result to prevent JIT optimization from eliminating the computation
+        let result = "";
+        for (const d of tickValues) {
+          result = d.toFixed(sig_figs) + suffix;
+        }
+        return result;
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark tick label Map construction (one-time cost during data processing)
+  for (const size of DATA_SIZES) {
+    const tickLabels = Array.from({ length: size }, (_, i) => ({
+      x: i,
+      label: `Point ${i + 1}`
+    }));
+
+    runner.benchmark(
+      'tickLabelMap construction',
+      'Axis Rendering',
+      () => {
+        const map = new Map<number, string>();
+        for (let i = 0; i < tickLabels.length; i++) {
+          map.set(tickLabels[i].x, tickLabels[i].label);
+        }
+      },
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // ============================================================================
   // SAVE RESULTS
   // ============================================================================
 
