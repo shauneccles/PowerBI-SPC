@@ -74,13 +74,24 @@ interface WorkerResponse {
 }
 
 /**
+ * Cached worker script - generated once, reused across all manager instances
+ */
+let cachedWorkerScript: string | null = null;
+
+/**
  * Generate inline worker script as a string
  * This allows creating a blob URL worker that works in Power BI's sandboxed environment
+ * The script is cached after first generation for performance.
  */
 function generateWorkerScript(): string {
+  // Return cached script if available
+  if (cachedWorkerScript !== null) {
+    return cachedWorkerScript;
+  }
+  
   // The worker script must be self-contained - it cannot import modules
   // Instead, we inline the calculation logic directly
-  return `
+  cachedWorkerScript = `
 // Inline Worker Script - Session 10: Web Worker Offloading
 // This script is generated inline to work within Power BI's sandboxed iframe
 
@@ -410,7 +421,7 @@ self.onmessage = function(event) {
     self.postMessage({ 
       requestId, 
       success: false, 
-      error: error.message || String(error),
+      error: (error && error.message) ? error.message : String(error),
       duration 
     });
   }
@@ -419,6 +430,8 @@ self.onmessage = function(event) {
 // Signal ready
 self.postMessage({ type: 'ready' });
 `;
+  
+  return cachedWorkerScript;
 }
 
 /**
@@ -729,9 +742,9 @@ export class CalculationWorkerManager {
       const rules: { rule: string; args: any[] }[] = [];
       
       if (settings.astronomical) {
-        const ll = limits.ll99 ?? [];
-        const ul = limits.ul99 ?? [];
-        rules.push({ rule: 'astronomical', args: [values, ll, ul] });
+        const ll99 = limits.ll99 ?? [];
+        const ul99 = limits.ul99 ?? [];
+        rules.push({ rule: 'astronomical', args: [values, ll99, ul99] });
       }
       
       if (settings.shift) {
@@ -743,9 +756,9 @@ export class CalculationWorkerManager {
       }
       
       if (settings.twoInThree) {
-        const ll = limits.ll95 ?? [];
-        const ul = limits.ul95 ?? [];
-        rules.push({ rule: 'twoInThree', args: [values, ll, ul, settings.twoInThreeHighlightSeries || false] });
+        const ll95 = limits.ll95 ?? [];
+        const ul95 = limits.ul95 ?? [];
+        rules.push({ rule: 'twoInThree', args: [values, ll95, ul95, settings.twoInThreeHighlightSeries || false] });
       }
       
       const results = await this.sendMessage<Record<string, string[]>>('detectOutliersBatch', { rules });
@@ -791,9 +804,9 @@ export class CalculationWorkerManager {
     };
     
     if (settings.astronomical) {
-      const ll = limits.ll99 ?? [];
-      const ul = limits.ul99 ?? [];
-      result.astpoint = astronomical(values, ll, ul);
+      const ll99 = limits.ll99 ?? [];
+      const ul99 = limits.ul99 ?? [];
+      result.astpoint = astronomical(values, ll99, ul99);
     }
     
     if (settings.shift) {
@@ -805,9 +818,9 @@ export class CalculationWorkerManager {
     }
     
     if (settings.twoInThree) {
-      const ll = limits.ll95 ?? [];
-      const ul = limits.ul95 ?? [];
-      result.two_in_three = twoInThree(values, ll, ul, settings.twoInThreeHighlightSeries || false);
+      const ll95 = limits.ll95 ?? [];
+      const ul95 = limits.ul95 ?? [];
+      result.two_in_three = twoInThree(values, ll95, ul95, settings.twoInThreeHighlightSeries || false);
     }
     
     // Track execution time
