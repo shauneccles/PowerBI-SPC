@@ -30,3 +30,18 @@ export { default as calculateTrendLine } from "./calculateTrendLine"
 export { default as isValidNumber } from "./isValidNumber"
 export { default as groupBy } from "./groupBy"
 export { default as leastIndex } from "./leastIndex"
+export {
+  hashArray,
+  hashObject,
+  createDataState,
+  createSettingsState,
+  detectDataChanges,
+  detectSettingsChanges,
+  computeChangeFlags,
+  debounce,
+  RenderScheduler,
+  ComputedValueCache,
+  type ChangeFlags,
+  type DataState,
+  type SettingsState
+} from "./changeDetection"

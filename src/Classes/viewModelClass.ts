@@ -5,7 +5,10 @@ type VisualTooltipDataItem = powerbi.extensibility.VisualTooltipDataItem;
 type ISelectionId = powerbi.visuals.ISelectionId;
 import * as limitFunctions from "../Limit Calculations"
 import { settingsClass, type defaultSettingsType, type derivedSettingsClass } from "../Classes";
-import { buildTooltip, getAesthetic, checkFlagDirection, truncate, type truncateInputs, multiply, rep, type dataObject, extractInputData, isNullOrUndefined, variationIconsToDraw, assuranceIconToDraw, validateDataView, valueFormatter, calculateTrendLine, groupBy } from "../Functions"
+import { buildTooltip, getAesthetic, checkFlagDirection, truncate, type truncateInputs, multiply, rep, type dataObject, extractInputData, isNullOrUndefined, variationIconsToDraw, assuranceIconToDraw, validateDataView, valueFormatter, calculateTrendLine, groupBy,
+  createDataState, createSettingsState, computeChangeFlags,
+  type ChangeFlags, type DataState, type SettingsState
+} from "../Functions"
 import { astronomical, trend, twoInThree, shift } from "../Outlier Flagging"
 import { lineNameMap } from "../Functions/getAesthetic";
 
@@ -161,6 +164,14 @@ export default class viewModelClass {
   plotPointsGrouped: plotDataGrouped[];
   identitiesGrouped: ISelectionId[][];
 
+  // Change detection state (Session 6)
+  /** Previous data state for change detection */
+  private prevDataState: DataState | null;
+  /** Previous settings state for change detection */
+  private prevSettingsState: SettingsState | null;
+  /** Last computed change flags from the most recent update */
+  lastChangeFlags: ChangeFlags | null;
+
   constructor() {
     this.inputData = <dataObject>null;
     this.inputSettings = new settingsClass();
@@ -172,6 +183,10 @@ export default class viewModelClass {
     this.colourPalette = null;
     this.headless = false;
     this.frontend = false;
+    // Initialize change detection state (Session 6)
+    this.prevDataState = null;
+    this.prevSettingsState = null;
+    this.lastChangeFlags = null;
   }
 
   update(options: VisualUpdateOptions, host: IVisualHost): viewModelValidationT {
@@ -229,6 +244,10 @@ export default class viewModelClass {
       return res;
     }
 
+    // Session 6: Create current settings state for change detection
+    // The settings object is typed as defaultSettingsType but is compatible with Record<string, unknown>
+    const currentSettingsState = createSettingsState(this.inputSettings.settings);
+
     // Only re-construct data and re-calculate limits if they have changed
     if (options.type === 2 || this.firstRun) {
       if (options.dataViews[0].categorical.categories.some(d => d.source.roles.indicator)) {
@@ -266,6 +285,16 @@ export default class viewModelClass {
           this.outliersGrouped.push(outliers);
         })
         this.initialisePlotDataGrouped();
+        
+        // Session 6: Compute change flags for grouped mode
+        // For grouped mode, we use a simplified change detection since data is processed per-group
+        this.lastChangeFlags = computeChangeFlags(
+          this.prevDataState,
+          createDataState(null, null, null, null, this.svgWidth, this.svgHeight),
+          this.prevSettingsState,
+          currentSettingsState,
+          this.firstRun
+        );
       } else {
         this.showGrouped = false;
         this.groupNames = null;
@@ -282,20 +311,75 @@ export default class viewModelClass {
                                           idx_per_indicator[0]);
 
         if (this.inputData.validationStatus.status === 0) {
-          this.groupStartEndIndexes = this.getGroupingIndexes(this.inputData, this.splitIndexes);
-          this.controlLimits = this.calculateLimits(this.inputData, this.groupStartEndIndexes, this.inputSettings.settings);
-          this.scaleAndTruncateLimits(this.controlLimits, this.inputSettings.settings,
-                                      this.inputSettings.derivedSettings);
-          this.outliers = this.flagOutliers(this.controlLimits, this.groupStartEndIndexes,
-                                            this.inputSettings.settings,
-                                            this.inputSettings.derivedSettings);
+          // Session 6: Create current data state for change detection
+          const currentDataState = createDataState(
+            this.inputData.limitInputArgs?.numerators ?? null,
+            this.inputData.limitInputArgs?.denominators ?? null,
+            this.inputData.limitInputArgs?.keys ?? null,
+            this.splitIndexes,
+            this.svgWidth,
+            this.svgHeight
+          );
+
+          // Session 6: Compute comprehensive change flags
+          this.lastChangeFlags = computeChangeFlags(
+            this.prevDataState,
+            currentDataState,
+            this.prevSettingsState,
+            currentSettingsState,
+            this.firstRun
+          );
+
+          // Session 6: Selective recalculation based on change flags
+          // Only recalculate limits if data or relevant settings changed
+          if (this.lastChangeFlags.limitsNeedRecalc || this.firstRun) {
+            this.groupStartEndIndexes = this.getGroupingIndexes(this.inputData, this.splitIndexes);
+            this.controlLimits = this.calculateLimits(this.inputData, this.groupStartEndIndexes, this.inputSettings.settings);
+            this.scaleAndTruncateLimits(this.controlLimits, this.inputSettings.settings,
+                                        this.inputSettings.derivedSettings);
+          }
+
+          // Session 6: Only recalculate outliers if needed
+          if (this.lastChangeFlags.outliersNeedRecalc || this.firstRun) {
+            this.outliers = this.flagOutliers(this.controlLimits, this.groupStartEndIndexes,
+                                              this.inputSettings.settings,
+                                              this.inputSettings.derivedSettings);
+          }
 
           // Structure the data and calculated limits to the format needed for plotting
           this.initialisePlotData(host);
           this.initialiseGroupedLines();
+
+          // Session 6: Update previous data state for next comparison
+          this.prevDataState = currentDataState;
         }
       }
+    } else {
+      // Session 6: Handle resize-only or style-only updates
+      // Compute change flags even for non-data updates
+      const currentDataState = createDataState(
+        this.inputData?.limitInputArgs?.numerators ?? null,
+        this.inputData?.limitInputArgs?.denominators ?? null,
+        this.inputData?.limitInputArgs?.keys ?? null,
+        this.splitIndexes,
+        this.svgWidth,
+        this.svgHeight
+      );
+
+      this.lastChangeFlags = computeChangeFlags(
+        this.prevDataState,
+        currentDataState,
+        this.prevSettingsState,
+        currentSettingsState,
+        this.firstRun
+      );
+
+      // Update previous state for resize detection
+      this.prevDataState = currentDataState;
     }
+
+    // Session 6: Update previous settings state for next comparison
+    this.prevSettingsState = currentSettingsState;
 
     this.firstRun = false;
     if (this.showGrouped) {

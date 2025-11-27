@@ -10,7 +10,7 @@ import { drawXAxis, drawYAxis, drawTooltipLine, drawLines,
           drawValueLabels, drawLineLabels } from "./D3 Plotting Functions"
 import { plotPropertiesClass, viewModelClass, type plotData, type viewModelValidationT } from "./Classes"
 import type { lineData, plotDataGrouped } from "./Classes/viewModelClass";
-import { getAesthetic, identitySelected } from "./Functions";
+import { getAesthetic, identitySelected, type ChangeFlags } from "./Functions";
 
 export type svgBaseType = d3.Selection<SVGSVGElement, unknown, null, undefined>;
 export type divBaseType = d3.Selection<HTMLDivElement, unknown, null, undefined>;
@@ -22,6 +22,10 @@ export class Visual implements powerbi.extensibility.IVisual {
   viewModel: viewModelClass;
   plotProperties: plotPropertiesClass;
   selectionManager: powerbi.extensibility.ISelectionManager;
+  
+  // Session 6: Track last viewport for resize detection
+  private lastViewportWidth: number;
+  private lastViewportHeight: number;
 
   constructor(options: powerbi.extensibility.visual.VisualConstructorOptions) {
     this.tableDiv = d3.select(options.element).append("div")
@@ -44,6 +48,10 @@ export class Visual implements powerbi.extensibility.IVisual {
 
     table.append("thead").append("tr").classed("table-header", true);
     table.append('tbody').classed("table-body", true);
+    
+    // Session 6: Initialize viewport tracking
+    this.lastViewportWidth = 0;
+    this.lastViewportHeight = 0;
   }
 
   public update(options: VisualUpdateOptions): void {
@@ -68,6 +76,15 @@ export class Visual implements powerbi.extensibility.IVisual {
         return;
       }
 
+      // Session 6: Get change flags for selective rendering
+      const changeFlags: ChangeFlags | null = this.viewModel.lastChangeFlags;
+      
+      // Session 6: Detect viewport-only changes (resize)
+      const viewportChanged = options.viewport.width !== this.lastViewportWidth ||
+                              options.viewport.height !== this.lastViewportHeight;
+      this.lastViewportWidth = options.viewport.width;
+      this.lastViewportHeight = options.viewport.height;
+
       this.plotProperties.update(options, this.viewModel);
 
       if (update_status.warning) {
@@ -81,7 +98,8 @@ export class Visual implements powerbi.extensibility.IVisual {
                      .call(addContextMenu, this);
       } else {
         this.resizeCanvas(options.viewport.width, options.viewport.height);
-        this.drawVisual();
+        // Session 6: Use selective rendering when possible
+        this.drawVisualSelective(changeFlags, viewportChanged);
         this.adjustPaddingForOverflow();
       }
 
@@ -92,6 +110,75 @@ export class Visual implements powerbi.extensibility.IVisual {
       this.svg.call(drawErrors, options, this.viewModel.colourPalette, caught_error.message, "internal");
       console.error(caught_error)
       this.host.eventService.renderingFailed(options);
+    }
+  }
+
+  /**
+   * Session 6: Selective visual rendering based on change flags
+   * Only renders components that have changed, improving performance
+   * for partial updates like style changes or resizes
+   * 
+   * @param changeFlags - Change detection flags from viewModel
+   * @param viewportChanged - Whether the viewport dimensions changed
+   */
+  drawVisualSelective(changeFlags: ChangeFlags | null, viewportChanged: boolean): void {
+    // If no change flags available or this is the first render, render everything
+    if (!changeFlags) {
+      this.drawVisual();
+      return;
+    }
+
+    const renderNeeded = changeFlags.renderNeeded;
+    
+    // If 'all' is in the set, render everything
+    if (renderNeeded.has('all')) {
+      this.drawVisual();
+      return;
+    }
+
+    // Session 6: Selective rendering based on what changed
+    // Always update axes if viewport changed
+    if (viewportChanged || renderNeeded.has('xAxis')) {
+      this.svg.call(drawXAxis, this);
+    }
+    if (viewportChanged || renderNeeded.has('yAxis')) {
+      this.svg.call(drawYAxis, this);
+    }
+
+    // Tooltip line is lightweight, always render
+    this.svg.call(drawTooltipLine, this);
+
+    // Render lines if data or line settings changed
+    if (renderNeeded.has('lines') || changeFlags.dataChanged || viewportChanged) {
+      this.svg.call(drawLines, this);
+    }
+
+    // Render line labels if needed
+    if (renderNeeded.has('lineLabels') || renderNeeded.has('lines') || changeFlags.dataChanged || viewportChanged) {
+      this.svg.call(drawLineLabels, this);
+    }
+
+    // Render dots if data or scatter settings changed
+    if (renderNeeded.has('dots') || changeFlags.dataChanged || viewportChanged) {
+      this.svg.call(drawDots, this);
+    }
+
+    // Render icons if needed
+    if (renderNeeded.has('icons') || changeFlags.dataChanged) {
+      this.svg.call(drawIcons, this);
+    }
+
+    // Context menu is lightweight, always set up
+    this.svg.call(addContextMenu, this);
+
+    // Download button
+    if (renderNeeded.has('downloadButton') || viewportChanged) {
+      this.svg.call(drawDownloadButton, this);
+    }
+
+    // Value labels
+    if (renderNeeded.has('valueLabels') || changeFlags.dataChanged || viewportChanged) {
+      this.svg.call(drawValueLabels, this);
     }
   }
 
