@@ -143,6 +143,8 @@ export default class viewModelClass {
   plotPoints: plotData[];
   groupedLines: [string, lineData[]][];
   tickLabels: { x: number; label: string; }[];
+  /** Session 8: Pre-computed Map for O(1) tick label lookup (vs O(n) array.filter) */
+  tickLabelMap: Map<number, string>;
   splitIndexes: number[];
   groupStartEndIndexes: number[][];
   firstRun: boolean;
@@ -183,6 +185,8 @@ export default class viewModelClass {
     this.colourPalette = null;
     this.headless = false;
     this.frontend = false;
+    // Session 8: Initialize tick label Map for O(1) axis rendering lookup
+    this.tickLabelMap = new Map<number, string>();
     // Initialize change detection state (Session 6)
     this.prevDataState = null;
     this.prevSettingsState = null;
@@ -773,6 +777,13 @@ export default class viewModelClass {
         }
       };
       this.tickLabels[i] = {x: index, label: keys[i].label};
+    }
+
+    // Session 8: Build tick label Map for O(1) lookup during axis rendering
+    // This converts O(n) filter per tick to O(1) Map.get() lookup
+    this.tickLabelMap = new Map<number, string>();
+    for (let i = 0; i < n; i++) {
+      this.tickLabelMap.set(this.tickLabels[i].x, this.tickLabels[i].label);
     }
   }
 
