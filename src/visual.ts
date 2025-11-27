@@ -10,7 +10,7 @@ import { drawXAxis, drawYAxis, drawTooltipLine, drawLines,
           drawValueLabels, drawLineLabels } from "./D3 Plotting Functions"
 import { plotPropertiesClass, viewModelClass, type plotData, type viewModelValidationT } from "./Classes"
 import type { lineData, plotDataGrouped } from "./Classes/viewModelClass";
-import { getAesthetic, identitySelected, identitySelectedWithCache, createSelectionIdSet, type ChangeFlags } from "./Functions";
+import { getAesthetic, identitySelectedWithCache, createSelectionIdSet, type ChangeFlags } from "./Functions";
 
 export type svgBaseType = d3.Selection<SVGSVGElement, unknown, null, undefined>;
 export type divBaseType = d3.Selection<HTMLDivElement, unknown, null, undefined>;
