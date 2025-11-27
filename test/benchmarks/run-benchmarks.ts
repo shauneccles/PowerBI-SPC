@@ -682,7 +682,7 @@ async function runBenchmarks() {
       'direct Map grouping',
       'ViewModel Processing',
       () => {
-        const groupedMap = new Map<string, typeof testData>();
+        const groupedMap = new Map<string, Array<{ x: number; line_value: number; group: string }>>();
         groups.forEach(g => groupedMap.set(g, []));
         for (let i = 0; i < testData.length; i++) {
           groupedMap.get(testData[i].group)!.push(testData[i]);
