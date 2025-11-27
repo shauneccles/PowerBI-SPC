@@ -694,6 +694,167 @@ async function runBenchmarks() {
   }
 
   // ============================================================================
+  // CHANGE DETECTION BENCHMARKS (Session 6)
+  // ============================================================================
+
+  console.log('📊 Benchmarking Change Detection (Session 6)...');
+
+  // Import change detection functions
+  const { hashArray, hashObject, createDataState, createSettingsState, computeChangeFlags, detectDataChanges, detectSettingsChanges } = await import('../../src/Functions/changeDetection');
+
+  // Benchmark hashArray function
+  for (const size of DATA_SIZES) {
+    const testArray = generateData(size);
+
+    runner.benchmark(
+      'hashArray (numbers)',
+      'Change Detection',
+      () => hashArray(testArray),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark hashArray with object arrays (keys)
+  for (const size of DATA_SIZES) {
+    const keysArray = createKeys(size);
+
+    runner.benchmark(
+      'hashArray (objects)',
+      'Change Detection',
+      () => hashArray(keysArray.map(k => k.label)),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark hashObject function (for settings)
+  const testSettings = {
+    chart_type: 'i',
+    outliers_in_limits: true,
+    num_points_subset: 10,
+    ul_truncate: 100,
+    ll_truncate: 0,
+    split_on_click: false,
+    ttip_show_numerator: true,
+    ttip_show_denominator: true
+  };
+
+  runner.benchmark(
+    'hashObject (settings)',
+    'Change Detection',
+    () => hashObject(testSettings),
+    { iterations: STANDARD_ITERATIONS, dataPoints: 1 }
+  );
+
+  // Benchmark createDataState function
+  for (const size of DATA_SIZES) {
+    const numerators = generateData(size);
+    const denominators = generateCountData(size);
+    const keys = createKeys(size);
+    const splitIndexes = [Math.floor(size / 3), Math.floor(2 * size / 3)];
+
+    runner.benchmark(
+      'createDataState',
+      'Change Detection',
+      () => createDataState(numerators, denominators, keys, splitIndexes, 800, 600),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark createSettingsState function
+  const fullSettings = {
+    spc: testSettings,
+    lines: { show_main: true, show_target: true, colour: '#000000' },
+    scatter: { size: 8, colour: '#0000FF', shape: 'Circle' },
+    outliers: { astronomical: true, shift: true, trend: true },
+    x_axis: { xlimit_l: null, xlimit_u: null },
+    y_axis: { ylimit_l: null, ylimit_u: null },
+    canvas: { left_padding: 50, right_padding: 50 }
+  };
+
+  runner.benchmark(
+    'createSettingsState',
+    'Change Detection',
+    () => createSettingsState(fullSettings),
+    { iterations: STANDARD_ITERATIONS, dataPoints: 1 }
+  );
+
+  // Benchmark detectDataChanges function
+  for (const size of DATA_SIZES) {
+    const numerators = generateData(size);
+    const denominators = generateCountData(size);
+    const keys = createKeys(size);
+    const splitIndexes = [Math.floor(size / 3)];
+    
+    const prevState = createDataState(numerators, denominators, keys, splitIndexes, 800, 600);
+    // Small change in data
+    const numeratorsCopy = [...numerators];
+    numeratorsCopy[0] = numeratorsCopy[0] + 0.001;
+    const currState = createDataState(numeratorsCopy, denominators, keys, splitIndexes, 800, 600);
+
+    runner.benchmark(
+      'detectDataChanges',
+      'Change Detection',
+      () => detectDataChanges(prevState, currState),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark detectSettingsChanges function
+  const prevSettingsState = createSettingsState(fullSettings);
+  const modifiedSettings = { ...fullSettings, spc: { ...fullSettings.spc, chart_type: 'p' } };
+  const currSettingsState = createSettingsState(modifiedSettings);
+
+  runner.benchmark(
+    'detectSettingsChanges',
+    'Change Detection',
+    () => detectSettingsChanges(prevSettingsState, currSettingsState),
+    { iterations: STANDARD_ITERATIONS, dataPoints: 1 }
+  );
+
+  // Benchmark full computeChangeFlags function
+  for (const size of DATA_SIZES) {
+    const numerators = generateData(size);
+    const denominators = generateCountData(size);
+    const keys = createKeys(size);
+    const splitIndexes = [Math.floor(size / 3)];
+    
+    const prevDataState = createDataState(numerators, denominators, keys, splitIndexes, 800, 600);
+    const prevSettingsState = createSettingsState(fullSettings);
+    
+    // Simulate a typical update with small data change
+    const numeratorsCopy = [...numerators];
+    numeratorsCopy[size - 1] = numeratorsCopy[size - 1] + 0.001;
+    const currDataState = createDataState(numeratorsCopy, denominators, keys, splitIndexes, 800, 600);
+    const currSettingsState = createSettingsState(fullSettings);
+
+    runner.benchmark(
+      'computeChangeFlags',
+      'Change Detection',
+      () => computeChangeFlags(prevDataState, currDataState, prevSettingsState, currSettingsState, false),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // Benchmark resize-only scenario (no data change)
+  for (const size of DATA_SIZES) {
+    const numerators = generateData(size);
+    const denominators = generateCountData(size);
+    const keys = createKeys(size);
+    const splitIndexes = [Math.floor(size / 3)];
+    
+    const prevDataState = createDataState(numerators, denominators, keys, splitIndexes, 800, 600);
+    const currDataState = createDataState(numerators, denominators, keys, splitIndexes, 1000, 800); // Only viewport changed
+    const settingsState = createSettingsState(fullSettings);
+
+    runner.benchmark(
+      'computeChangeFlags (resize)',
+      'Change Detection',
+      () => computeChangeFlags(prevDataState, currDataState, settingsState, settingsState, false),
+      { iterations: STANDARD_ITERATIONS, dataPoints: size }
+    );
+  }
+
+  // ============================================================================
   // SAVE RESULTS
   // ============================================================================
 
