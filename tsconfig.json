@@ -8,6 +8,8 @@
         "noImplicitReturns": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
+        "strictNullChecks": true,
+        "skipLibCheck": true,
         "strictBindCallApply": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
