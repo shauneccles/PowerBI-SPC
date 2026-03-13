@@ -63,7 +63,7 @@ export default class settingsClass {
 
     allSettingGroups.forEach((settingGroup: defaultSettingsKeys) => {
       const condFormatting: ConditionalReturnT<defaultSettingsType[defaultSettingsKeys]>
-        = extractConditionalFormatting(inputView?.categorical, settingGroup, this.settings[0], all_idxs);
+        = extractConditionalFormatting(inputView.categorical!, settingGroup, this.settings[0], all_idxs);
 
       if (condFormatting.validation.status !== 0) {
         this.validationStatus.status = condFormatting.validation.status;
@@ -138,7 +138,7 @@ export default class settingsClass {
         };
 
         for (const setting in settingsModel[curr_card_name].settingsGroups[card_group]) {
-          curr_card.revertToDefaultDescriptors.push({
+          curr_card.revertToDefaultDescriptors!.push({
             objectName: curr_card_name,
             propertyName: setting
           });
@@ -155,7 +155,7 @@ export default class settingsClass {
                   selector: { data: [{ dataViewWildcard: { matchingOption: 0 } }] },
                   instanceKind: (typeof this.settings[0][curr_card_name][setting]) != "boolean"
                                 ? (<any>VisualEnumerationInstanceKinds.ConstantOrRule as powerbi.VisualEnumerationInstanceKinds)
-                                : null
+                                : undefined
                 },
                 value: this.valueLookup(curr_card_name, card_group, setting),
                 items: settingsModel[curr_card_name].settingsGroups[card_group][setting]?.items,
@@ -164,7 +164,7 @@ export default class settingsClass {
             }
           };
 
-          curr_group.slices.push(curr_slice);
+          curr_group.slices!.push(curr_slice);
         }
 
         curr_card.groups.push(curr_group);
