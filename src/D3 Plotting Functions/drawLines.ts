@@ -31,8 +31,8 @@ export default function drawLines(selection: svgBaseType, visualObj: Visual) {
           const currPoint: lineData = currLineData[i];
 
           xValues[i] = visualObj.plotProperties.xScale(currPoint.x);
-          yValues[i] = visualObj.plotProperties.yScale(currPoint.line_value);
           yValidStatus[i] = !isNullOrUndefined(currPoint.line_value) && between(currPoint.line_value, ylower, yupper);
+          yValues[i] = yValidStatus[i] ? visualObj.plotProperties.yScale(currPoint.line_value!) : 0;
           anyValid = anyValid || yValidStatus[i];
         }
 
@@ -51,8 +51,8 @@ export default function drawLines(selection: svgBaseType, visualObj: Visual) {
           .attr("y2", (_, idx: number) => yValidStatus[idx + 1] ? yValues[idx + 1] : yValues[idx])
           .attr("fill", "none")
           .attr("stroke", (d: lineData) => {
-            return visualObj.viewModel.colourPalette.isHighContrast
-                    ? visualObj.viewModel.colourPalette.foregroundColour
+            return visualObj.viewModel.colourPalette!.isHighContrast
+                    ? visualObj.viewModel.colourPalette!.foregroundColour
                     : getAesthetic(currLine, "lines", "colour", { lines: d.aesthetics } as defaultSettingsType)
           })
           .attr("stroke-width", (d: lineData) => getAesthetic(currLine, "lines", "width", { lines: d.aesthetics } as defaultSettingsType))

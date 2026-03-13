@@ -62,7 +62,7 @@ export default function drawDots(selection: svgBaseType, visualObj: Visual) {
             visualObj.host.persistProperties({
               replace: [{
                 objectName: "split_indexes_storage",
-                selector: undefined,
+                selector: undefined as any,
                 properties: { split_indexes: JSON.stringify(visualObj.viewModel.splitIndexes) }
               }]
             });

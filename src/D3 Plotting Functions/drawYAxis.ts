@@ -22,7 +22,7 @@ export default function drawYAxis(selection: svgBaseType, visualObj: Visual) {
 
   const yAxisProperties: axisProperties = visualObj.plotProperties.yAxis;
   const yAxis: d3.Axis<d3.NumberValue> = d3.axisLeft(visualObj.plotProperties.yScale);
-  const yaxis_sig_figs: number = visualObj.viewModel.inputSettings.settings[0].y_axis.ylimit_sig_figs;
+  const yaxis_sig_figs: number | null = visualObj.viewModel.inputSettings.settings[0].y_axis.ylimit_sig_figs;
   const sig_figs: number = isNullOrUndefined(yaxis_sig_figs) ? visualObj.viewModel.inputSettings.settings[0].spc.sig_figs : yaxis_sig_figs;
   const displayPlot: boolean = visualObj.plotProperties.displayPlot;
 

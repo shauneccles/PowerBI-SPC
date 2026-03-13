@@ -4,8 +4,8 @@ import type plotPropertiesClass from "../Classes/plotPropertiesClass";
 
 export default function drawTooltipLine(selection: svgBaseType, visualObj: Visual) {
   const plotProperties: plotPropertiesClass = visualObj.plotProperties;
-  const colour: string = visualObj.viewModel.colourPalette.isHighContrast
-    ? visualObj.viewModel.colourPalette.foregroundColour
+  const colour: string = visualObj.viewModel.colourPalette!.isHighContrast
+    ? visualObj.viewModel.colourPalette!.foregroundColour
     : "black";
   const xAxisLine = selection
             .select(".ttip-line-x")
@@ -32,12 +32,12 @@ export default function drawTooltipLine(selection: svgBaseType, visualObj: Visua
     }
     const plotPoints: plotData[] = visualObj.viewModel.plotPoints[0] as plotData[]
 
-    const boundRect = visualObj.svg.node().getBoundingClientRect();
+    const boundRect = visualObj.svg.node()!.getBoundingClientRect();
     const xValue: number = (event.pageX - boundRect.left);
-    let indexNearestValue: number;
+    let indexNearestValue: number = 0;
     let nearestDistance: number = Infinity;
-    let x_coord: number;
-    let y_coord: number;
+    let x_coord: number = 0;
+    let y_coord: number = 0;
     for (let i = 0; i < plotPoints.length; i++) {
       const curr_x: number = plotProperties.xScale(plotPoints[i].x);
       const curr_diff: number = Math.abs(curr_x - xValue);

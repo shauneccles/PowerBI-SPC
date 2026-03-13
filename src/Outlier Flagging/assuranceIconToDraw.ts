@@ -24,8 +24,10 @@ export default function assuranceIconToDraw(controlLimits: controlLimitsObject,
     return "none";
   }
   const imp_direction: string = inputSettings.outliers.improvement_direction;
-  const N: number = controlLimits.ll99.length - 1;
-  const alt_target: number = controlLimits?.alt_targets?.[N];
+  const ll99 = controlLimits.ll99!;
+  const ul99 = controlLimits.ul99!;
+  const N: number = ll99.length - 1;
+  const alt_target: number | null | undefined = controlLimits?.alt_targets?.[N];
 
   // No assurance icon if no alternative target or neutral improvement direction
   if (isNullOrUndefined(alt_target) || imp_direction === "neutral") {
@@ -35,10 +37,10 @@ export default function assuranceIconToDraw(controlLimits: controlLimitsObject,
   const impDirectionIncrease: boolean = imp_direction === "increase";
 
   // Target is above upper 99% limit
-  if (alt_target > controlLimits.ul99[N]) {
+  if (alt_target > ul99[N]) {
     return impDirectionIncrease ? "consistentFail" : "consistentPass";
   // Target is below lower 99% limit
-  } else if (alt_target < controlLimits.ll99[N]) {
+  } else if (alt_target < ll99[N]) {
     return impDirectionIncrease ? "consistentPass" : "consistentFail";
   // Target is within control limits (inconsistent)
   } else {
