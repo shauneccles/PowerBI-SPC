@@ -13,13 +13,13 @@ type TargetT = number[] | string[] | VisualTooltipDataItem[][];
 
 function formatKeys(col: powerbi.DataViewCategoryColumn[], inputSettings: defaultSettingsType, idxs: number[]): string[] {
   const n_keys: number = idxs.length;
-  let ret = new Array<string>(n_keys);
+  const ret: (string | null)[] = new Array(n_keys);
   // If only one input is passed and it is not a date type then just return the string values
   if (col.length === 1 && !(col[0].source.type?.temporal)) {
     for (let i = 0; i < n_keys; i++) {
       ret[i] = isNullOrUndefined(col[0].values[idxs[i]]) ? null : String(col[0].values[idxs[i]]);
     }
-    return ret;
+    return ret as string[];
   }
   const delim: string = inputSettings.dates.date_format_delim;
   // If multiple inputs are passed but not as a 'Date Hierarchy' type then
@@ -30,7 +30,7 @@ function formatKeys(col: powerbi.DataViewCategoryColumn[], inputSettings: defaul
       const currKey: string = col.map(keyCol => keyCol.values[idxs[i]]).join(delim)
       ret[i] = currKey === blankKey ? null : currKey
     }
-    return ret;
+    return ret as string[];
   }
   const inputDates = parseInputDates(col, idxs);
   const formatOptions = dateSettingsToFormatOptions(inputSettings.dates);
@@ -39,10 +39,11 @@ function formatKeys(col: powerbi.DataViewCategoryColumn[], inputSettings: defaul
   let month_elem: string = locale === "en-GB" ? "month" : "day";
 
   for (let i = 0; i < n_keys; i++) {
-    if (isNullOrUndefined(inputDates.dates[i])) {
+    const dateVal = inputDates.dates[i];
+    if (isNullOrUndefined(dateVal)) {
       ret[i] = null
     } else {
-      const datePartsRecord = formatDateParts(inputDates.dates[i], locale, formatOptions);
+      const datePartsRecord = formatDateParts(dateVal, locale, formatOptions);
       const datePartStrings: string[] = [datePartsRecord.weekday + " " + datePartsRecord[day_elem],
                                           datePartsRecord[month_elem],
                                           inputDates.quarters?.[i] ?? "",
@@ -50,11 +51,11 @@ function formatKeys(col: powerbi.DataViewCategoryColumn[], inputSettings: defaul
       ret[i] = datePartStrings.filter(d => String(d).trim()).join(delim)
     }
   }
-  return ret
+  return ret as string[]
 }
 
 function extractKeys(inputView: DataViewCategorical, inputSettings: defaultSettingsType, idxs: number[]): string[] {
-  const col: powerbi.DataViewCategoryColumn[] = inputView.categories.filter(viewColumn => viewColumn.source?.roles?.["key"]);
+  const col: powerbi.DataViewCategoryColumn[] = inputView.categories!.filter(viewColumn => viewColumn.source?.roles?.["key"]);
 
   // To handle separately formatting multiple 'key' columns that may come from different
   // queries (e.g., Date Hierarchy + string) we first group the columns by their query name
@@ -100,22 +101,22 @@ function extractKeys(inputView: DataViewCategorical, inputSettings: defaultSetti
     formattedKeys.push(groupKeys);
   }
   // Combine the formatted keys from all groups
-  const combinedKeys: string[] = [];
+  const combinedKeys: (string | null)[] = [];
   const n_keys: number = idxs.length;
   for (let i = 0; i < n_keys; i++) {
     const keyParts = formattedKeys.map(keys => keys[i]).filter(k => k !== null && k !== undefined);
     combinedKeys.push(keyParts.length > 0 ? keyParts.join(" ") : null);
   }
-  return combinedKeys;
+  return combinedKeys as string[];
 }
 
 function extractTooltips(inputView: DataViewCategorical, inputSettings: defaultSettingsType, idxs: number[]): VisualTooltipDataItem[][] {
-  const tooltipColumns = inputView.values.filter(viewColumn => viewColumn.source.roles.tooltips);
+  const tooltipColumns = inputView.values!.filter(viewColumn => viewColumn.source.roles?.["tooltips"]);
   const n_keys: number = idxs.length;
   let ret: VisualTooltipDataItem[][] = new Array<VisualTooltipDataItem[]>(n_keys);
   for (let i = 0; i < n_keys; i++) {
     ret[i] = tooltipColumns.map(viewColumn => {
-      const config = { valueType: viewColumn.source.type, dateSettings: inputSettings.dates };
+      const config = { valueType: viewColumn.source.type!, dateSettings: inputSettings.dates };
       const tooltipValueFormatted: string = formatPrimitiveValue(viewColumn?.values?.[idxs[i]], config)
       return <VisualTooltipDataItem>{
         displayName: viewColumn.source.displayName,
@@ -129,7 +130,7 @@ function extractTooltips(inputView: DataViewCategorical, inputSettings: defaultS
 export default function extractDataColumn<T extends TargetT>(inputView: DataViewCategorical,
                                               name: string,
                                               inputSettings: defaultSettingsType,
-                                              idxs: number[]): T {
+                                              idxs: number[]): T | null {
   if (name === "key") {
     return extractKeys(inputView, inputSettings, idxs) as Extract<T, string[]>;
   }
@@ -137,20 +138,20 @@ export default function extractDataColumn<T extends TargetT>(inputView: DataView
     return extractTooltips(inputView, inputSettings, idxs) as Extract<T, VisualTooltipDataItem[][]>;
   }
 
-  const columnRaw = inputView.values.filter(viewColumn => viewColumn?.source?.roles?.[name]) as DataViewValueColumn[];
+  const columnRaw = inputView.values!.filter(viewColumn => viewColumn?.source?.roles?.[name]) as DataViewValueColumn[];
   if (columnRaw.length === 0) {
     return null
   }
   const n_keys: number = idxs.length;
   if (name === "groupings" || name === "labels") {
-    let ret = new Array<string>(n_keys);
+    const ret: (string | null)[] = new Array(n_keys);
     for (let i = 0; i < n_keys; i++) {
       ret[i] = isNullOrUndefined(columnRaw?.[0]?.values?.[idxs[i]]) ? null : String(columnRaw[0].values[idxs[i]]);
     }
     return ret as Extract<T, string[]>;
   }
   // Assumed that any other requested columns are numeric columns for plotting
-  let ret = new Array<number>(n_keys);
+  const ret: (number | null)[] = new Array(n_keys);
   for (let i = 0; i < n_keys; i++) {
     ret[i] = isNullOrUndefined(columnRaw?.[0]?.values?.[idxs[i]]) ? null : Number(columnRaw[0].values[idxs[i]]);
   }

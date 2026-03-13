@@ -11,7 +11,7 @@ import type { DateFormatOptions } from "./formatDateParts"
  * - "Thursday DD" → "long" (full weekday name)
  * - "(blank)" → null (omit day entirely)
  */
-const weekdayDateMap: Record<string, "long" | "short"> = {
+const weekdayDateMap: Record<string, "long" | "short" | null> = {
   "DD" : null,
   "Thurs DD" : "short",
   "Thursday DD" : "long",
@@ -27,7 +27,7 @@ const weekdayDateMap: Record<string, "long" | "short"> = {
  * - "Month" → "long" (e.g., "January", "December")
  * - "(blank)" → null (omit month entirely)
  */
-const monthDateMap: Record<string, "2-digit" | "short" | "long"> = {
+const monthDateMap: Record<string, "2-digit" | "short" | "long" | null> = {
   "MM" : "2-digit",
   "Mon" : "short",
   "Month" : "long",
@@ -42,7 +42,7 @@ const monthDateMap: Record<string, "2-digit" | "short" | "long"> = {
  * - "YY" → "2-digit" (e.g., "24")
  * - "(blank)" → null (omit year entirely)
  */
-const yearDateMap: Record<string, "numeric" | "2-digit"> = {
+const yearDateMap: Record<string, "numeric" | "2-digit" | null> = {
   "YYYY" : "numeric",
   "YY" : "2-digit",
   "(blank)" : null
@@ -130,7 +130,7 @@ export default function dateSettingsToFormatOptions(date_settings: defaultSettin
         // Special case: when day format includes weekday name, also add weekday option
         // This handles "Thurs DD" and "Thursday DD" formats
         if (formattedKey === "day" && date_settings[key] !== "DD") {
-          formatOpts.push(["weekday", weekdayDateMap[date_settings[key]]])
+          formatOpts.push(["weekday", weekdayDateMap[date_settings[key]]!])
         }
       }
     }

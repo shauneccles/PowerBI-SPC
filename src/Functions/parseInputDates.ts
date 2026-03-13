@@ -51,7 +51,10 @@ export default function parseInputDates(inputs: powerbi.DataViewCategoryColumn[]
     for (let i = 0; i < n_keys; i++) {
       const datePartsArray: (string | number)[][] = [];
       for (let j = 0; j < inputs.length; j++) {
-        datePartsArray.push(temporalTypeToKey(inputs[j].source.type, inputs[j].values[idxs[i]]));
+        const key = temporalTypeToKey(inputs[j].source.type!, inputs[j].values[idxs[i]]);
+        if (key) {
+          datePartsArray.push(key);
+        }
       }
       const datePartsObj: datePartsType = Object.fromEntries(datePartsArray);
       if (datePartsObj?.quarter) {

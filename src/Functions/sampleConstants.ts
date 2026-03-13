@@ -24,7 +24,7 @@ import isNullOrUndefined from "../Functions/isNullOrUndefined";
  */
 export function c4(sampleSize: number): number {
   if ((sampleSize <= 1) || isNullOrUndefined(sampleSize)) {
-    return null;
+    return NaN;
   }
   const Nminus1: number = sampleSize - 1;
 
@@ -78,7 +78,7 @@ export function c5(sampleSize: number): number {
  * @see {@link https://en.wikipedia.org/wiki/Xbar_and_s_chart}
  */
 export function a3(sampleSize: number): number {
-  const filt_samp: number = sampleSize  <= 1 ? null : sampleSize;
+  const filt_samp: number = sampleSize  <= 1 ? NaN : sampleSize;
   return 3.0 / (c4(filt_samp) * Math.sqrt(filt_samp));
 }
 

@@ -18,7 +18,7 @@ import type { ValidationT } from "./validateInputData";
 export type dataObject = {
   limitInputArgs: controlLimitsArgs | null;
   spcSettings: defaultSettingsType["spc"] | null;
-  highlights: PrimitiveValue[] | null;
+  highlights: (PrimitiveValue | null)[];
   anyHighlights: boolean;
   categories: DataViewCategoryColumn | null;
   groupings: string[] | null;
@@ -30,9 +30,9 @@ export type dataObject = {
   labels: string[] | null;
   anyLabels: boolean;
   warningMessage: string;
-  alt_targets: number[] | null;
-  speclimits_lower: number[] | null;
-  speclimits_upper: number[] | null;
+  alt_targets: (number | null)[] | null;
+  speclimits_lower: (number | null)[] | null;
+  speclimits_upper: (number | null)[] | null;
   validationStatus: ValidationT;
 }
 
@@ -40,7 +40,7 @@ function invalidInputData(inputValidStatus: ValidationT): dataObject {
   return {
     limitInputArgs: null,
     spcSettings: null,
-    highlights: null,
+    highlights: [],
     anyHighlights: false,
     categories: null,
     groupings: null,
@@ -51,7 +51,7 @@ function invalidInputData(inputValidStatus: ValidationT): dataObject {
     tooltips: null,
     labels: null,
     anyLabels: false,
-    warningMessage: inputValidStatus.error,
+    warningMessage: inputValidStatus.error ?? "",
     alt_targets: null,
     speclimits_lower: null,
     speclimits_upper: null,
@@ -64,54 +64,57 @@ export default function extractInputData(inputView: DataViewCategorical,
                                           derivedSettings: derivedSettingsClass,
                                           validationMessages: string[][],
                                           idxs: number[]): dataObject {
-  const numerators: number[] = extractDataColumn<number[]>(inputView, "numerators", inputSettings, idxs);
-  const denominators: number[] = extractDataColumn<number[]>(inputView, "denominators", inputSettings, idxs);
-  const xbar_sds: number[] = extractDataColumn<number[]>(inputView, "xbar_sds", inputSettings, idxs);
-  const keys: string[] = extractDataColumn<string[]>(inputView, "key", inputSettings, idxs);
+  const numerators = extractDataColumn<number[]>(inputView, "numerators", inputSettings, idxs);
+  const denominators = extractDataColumn<number[]>(inputView, "denominators", inputSettings, idxs);
+  const xbar_sds = extractDataColumn<number[]>(inputView, "xbar_sds", inputSettings, idxs);
+  const keys = extractDataColumn<string[]>(inputView, "key", inputSettings, idxs);
   const tooltips = extractDataColumn<VisualTooltipDataItem[][]>(inputView, "tooltips", inputSettings, idxs);
-  const groupings: string[] = extractDataColumn<string[]>(inputView, "groupings", inputSettings, idxs);
-  const labels: string[] = extractDataColumn<string[]>(inputView, "labels", inputSettings, idxs);
-  const highlights: powerbi.PrimitiveValue[] = idxs.map(d => inputView?.values?.[0]?.highlights?.[d]);
-  let scatter_cond = extractConditionalFormatting<defaultSettingsType["scatter"]>(inputView, "scatter", inputSettings, idxs)?.values;
-  let lines_cond = extractConditionalFormatting<defaultSettingsType["lines"]>(inputView, "lines", inputSettings, idxs)?.values;
-  let labels_cond = extractConditionalFormatting<defaultSettingsType["labels"]>(inputView, "labels", inputSettings, idxs)?.values;
-  let alt_targets: number[] = extractConditionalFormatting<defaultSettingsType["lines"]>(inputView, "lines", inputSettings, idxs)
-                                    ?.values
-                                    .map(d => inputSettings.lines.show_alt_target ? d.alt_target : null);
-  let speclimits_lower: number[] = extractConditionalFormatting<defaultSettingsType["lines"]>(inputView, "lines", inputSettings, idxs)
-                                    ?.values
-                                    .map(d => d.show_specification ? d.specification_lower : null);
-  let speclimits_upper: number[] = extractConditionalFormatting<defaultSettingsType["lines"]>(inputView, "lines", inputSettings, idxs)
-                                    ?.values
-                                    .map(d => d.show_specification ? d.specification_upper : null);
-  let spcSettings: defaultSettingsType["spc"][] = extractConditionalFormatting<defaultSettingsType["spc"]>(inputView, "spc", inputSettings, idxs)?.values
+  const groupings = extractDataColumn<string[]>(inputView, "groupings", inputSettings, idxs);
+  const labels = extractDataColumn<string[]>(inputView, "labels", inputSettings, idxs);
+  const highlights = idxs.map(d => inputView?.values?.[0]?.highlights?.[d] ?? null) as (PrimitiveValue | null)[];
+  let scatter_cond = extractConditionalFormatting<defaultSettingsType["scatter"]>(inputView, "scatter", inputSettings, idxs).values;
+  let lines_cond = extractConditionalFormatting<defaultSettingsType["lines"]>(inputView, "lines", inputSettings, idxs).values;
+  let labels_cond = extractConditionalFormatting<defaultSettingsType["labels"]>(inputView, "labels", inputSettings, idxs).values;
+  let alt_targets = extractConditionalFormatting<defaultSettingsType["lines"]>(inputView, "lines", inputSettings, idxs)
+                                    .values
+                                    ?.map(d => inputSettings.lines.show_alt_target ? d.alt_target : null) ?? null;
+  let speclimits_lower = extractConditionalFormatting<defaultSettingsType["lines"]>(inputView, "lines", inputSettings, idxs)
+                                    .values
+                                    ?.map(d => d.show_specification ? d.specification_lower : null) ?? null;
+  let speclimits_upper = extractConditionalFormatting<defaultSettingsType["lines"]>(inputView, "lines", inputSettings, idxs)
+                                    .values
+                                    ?.map(d => d.show_specification ? d.specification_upper : null) ?? null;
+  let spcSettings = extractConditionalFormatting<defaultSettingsType["spc"]>(inputView, "spc", inputSettings, idxs).values ?? null;
   const inputValidStatus: ValidationT = validateInputData(keys, numerators, denominators, xbar_sds, derivedSettings.chart_type_props, idxs);
   if (inputValidStatus.status !== 0) {
     return invalidInputData(inputValidStatus);
   }
 
+  // After validation passes (status === 0), keys and spcSettings are guaranteed non-null
+  const validKeys = keys!;
+  const validSpcSettings = spcSettings!;
   const valid_ids: number[] = new Array<number>();
   const valid_keys: { x: number, id: number, label: string }[] = new Array<{ x: number, id: number, label: string }>();
   const removalMessages: string[] = new Array<string>();
-  const groupVarName: string = inputView.categories[0].source.displayName;
+  const groupVarName: string = inputView.categories![0].source.displayName;
   const settingsMessages = validationMessages;
   let valid_x: number = 0;
   const x_axis_use_date: boolean = derivedSettings.chart_type_props.x_axis_use_date;
   idxs.forEach((i, idx) => {
     if (inputValidStatus.messages[idx] === "") {
       valid_ids.push(idx);
-      valid_keys.push({ x: valid_x, id: i, label: x_axis_use_date ? keys[idx] : valid_x.toString() });
+      valid_keys.push({ x: valid_x, id: i, label: x_axis_use_date ? validKeys[idx] : valid_x.toString() });
       valid_x += 1;
 
       if (settingsMessages[i].length > 0) {
         settingsMessages[i].forEach(setting_removal_message => {
           removalMessages.push(
-            `Conditional formatting for ${groupVarName} ${keys[idx]} ignored due to: ${setting_removal_message}.`
+            `Conditional formatting for ${groupVarName} ${validKeys[idx]} ignored due to: ${setting_removal_message}.`
           )}
         );
       }
     } else {
-      removalMessages.push(`${groupVarName} ${keys[idx]} removed due to: ${inputValidStatus.messages[idx]}.`)
+      removalMessages.push(`${groupVarName} ${validKeys[idx]} removed due to: ${inputValidStatus.messages[idx]}.`)
     }
   })
 
@@ -125,11 +128,11 @@ export default function extractInputData(inputView: DataViewCategorical,
     }
   })
 
-  const valid_alt_targets: number[] = extractValues(alt_targets, valid_ids);
+  const valid_alt_targets = extractValues(alt_targets, valid_ids);
   if (inputSettings.nhs_icons.show_assurance_icons) {
-    const alt_targets_length: number = valid_alt_targets?.length;
+    const alt_targets_length: number = valid_alt_targets.length;
     if (alt_targets_length > 0) {
-      const last_target: number = valid_alt_targets?.[alt_targets_length - 1];
+      const last_target = valid_alt_targets[alt_targets_length - 1];
       if (isNullOrUndefined(last_target)) {
         removalMessages.push("NHS Assurance icon requires a valid alt. target at last observation.")
       }
@@ -141,15 +144,15 @@ export default function extractInputData(inputView: DataViewCategorical,
   }
 
   const curr_highlights = extractValues(highlights, valid_ids);
-  const num_points_subset: number = spcSettings[0].num_points_subset;
+  const num_points_subset = validSpcSettings[0].num_points_subset;
   let subset_points: number[];
   if (isNullOrUndefined(num_points_subset) || !between(num_points_subset, 1, valid_ids.length)) {
     subset_points = seq(0, valid_ids.length - 1);
   } else {
-    if (spcSettings[0].subset_points_from === "Start") {
-      subset_points = seq(0, spcSettings[0].num_points_subset - 1);
+    if (validSpcSettings[0].subset_points_from === "Start") {
+      subset_points = seq(0, num_points_subset - 1);
     } else {
-      subset_points = seq(valid_ids.length - spcSettings[0].num_points_subset, valid_ids.length - 1);
+      subset_points = seq(valid_ids.length - num_points_subset, valid_ids.length - 1);
     }
   }
   const valid_labels: string[] = extractValues(labels, valid_ids);
@@ -159,16 +162,16 @@ export default function extractInputData(inputView: DataViewCategorical,
       numerators: extractValues(numerators, valid_ids),
       denominators: extractValues(denominators, valid_ids),
       xbar_sds: extractValues(xbar_sds, valid_ids),
-      outliers_in_limits: spcSettings[0].outliers_in_limits,
+      outliers_in_limits: validSpcSettings[0].outliers_in_limits,
       subset_points: subset_points
     },
-    spcSettings: spcSettings[0],
+    spcSettings: validSpcSettings[0],
     tooltips: extractValues(tooltips, valid_ids),
     labels: valid_labels,
     anyLabels: valid_labels.filter(d => !isNullOrUndefined(d) && d !== "").length > 0,
     highlights: curr_highlights,
     anyHighlights: curr_highlights.filter(d => !isNullOrUndefined(d)).length > 0,
-    categories: inputView.categories[0],
+    categories: inputView.categories![0],
     groupings: valid_groupings,
     groupingIndexes: groupingIndexes,
     scatter_formatting: extractValues(scatter_cond, valid_ids),

@@ -18,8 +18,9 @@ function getSettingValue<T>(settingObject: DataViewObjects, settingGroup: string
   if (isNullOrUndefined(propertyValue)) {
     return defaultValue;
   }
-  return (<Fill>propertyValue)?.solid ? (<Fill>propertyValue).solid.color as T
-                                      : propertyValue as T;
+  const asFill = propertyValue as Fill;
+  return asFill?.solid ? asFill.solid.color as T
+                       : propertyValue as T;
 }
 
 export default function
@@ -47,7 +48,7 @@ export default function
       settingNames.map(settingName => {
         const defaultSetting = defaultSettings[settingGroupName][settingName]["default"];
 
-        let extractedSetting = getSettingValue(inpObjects, settingGroupName, settingName, defaultSetting);
+        let extractedSetting = inpObjects ? getSettingValue(inpObjects, settingGroupName, settingName, defaultSetting) : defaultSetting;
         // PBI passes empty string when clearing conditional formatting
         // for dropdown setting using the eraser button, so just reset to default
         extractedSetting = extractedSetting === "" ? defaultSetting : extractedSetting;

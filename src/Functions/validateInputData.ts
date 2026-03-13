@@ -19,10 +19,10 @@ const enum ValidationFailTypes {
   SDNaN = 12
 }
 
-function validateInputDataImpl(key: string,
-                              numerator: number,
-                              denominator: number,
-                              xbar_sd: number,
+function validateInputDataImpl(key: string | null | undefined,
+                              numerator: number | null | undefined,
+                              denominator: number | null | undefined,
+                              xbar_sd: number | null | undefined,
                               chart_type_props: derivedSettingsClass["chart_type_props"],
                               check_denom: boolean): { message: string, type: ValidationFailTypes }  {
 
@@ -35,14 +35,10 @@ function validateInputDataImpl(key: string,
   if (isNullOrUndefined(numerator)) {
     rtn.message = "Numerator missing";
     rtn.type = ValidationFailTypes.NumeratorMissing;
-  }
-
-  if (isNaN(numerator)) {
+  } else if (isNaN(numerator)) {
     rtn.message = "Numerator is not a number";
     rtn.type = ValidationFailTypes.NumeratorNaN;
-  }
-
-  if (chart_type_props.numerator_non_negative && numerator < 0) {
+  } else if (chart_type_props.numerator_non_negative && numerator < 0) {
     rtn.message = "Numerator negative";
     rtn.type = ValidationFailTypes.NumeratorNegative;
   }
@@ -57,7 +53,7 @@ function validateInputDataImpl(key: string,
     } else if (denominator < 0) {
       rtn.message = "Denominator negative";
       rtn.type = ValidationFailTypes.DenominatorNegative;
-    } else if (chart_type_props.numerator_leq_denominator && denominator < numerator) {
+    } else if (chart_type_props.numerator_leq_denominator && !isNullOrUndefined(numerator) && denominator < numerator) {
       rtn.message = "Denominator < numerator";
       rtn.type = ValidationFailTypes.DenominatorLessThanNumerator;
     }
@@ -80,10 +76,10 @@ function validateInputDataImpl(key: string,
 
 // ESLint errors due to number of lines in function, but would reduce readability to separate further
 
-export default function validateInputData(keys: string[],
-                                          numerators: number[],
-                                          denominators: number[],
-                                          xbar_sds: number[],
+export default function validateInputData(keys: string[] | null,
+                                          numerators: number[] | null,
+                                          denominators: number[] | null,
+                                          xbar_sds: number[] | null,
                                           chart_type_props: derivedSettingsClass["chart_type_props"],
                                           idxs: number[]): { status: number, messages: string[], error?: string } {
   let allSameType: boolean = false;
@@ -93,7 +89,7 @@ export default function validateInputData(keys: string[],
                       || (chart_type_props.denominator_optional && !isNullOrUndefined(denominators) && denominators.length > 0);
   const n: number = idxs.length;
   for (let i = 0; i < n; i++) {
-    const validation = validateInputDataImpl(keys[i], numerators?.[i], denominators?.[i], xbar_sds?.[i], chart_type_props,  check_denom);
+    const validation = validateInputDataImpl(keys?.[i], numerators?.[i], denominators?.[i], xbar_sds?.[i], chart_type_props,  check_denom);
     messages.push(validation.message);
     all_status.push(validation.type);
   }
