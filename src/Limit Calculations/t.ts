@@ -1,4 +1,4 @@
-import iLimits from "./i"
+import iLimits from "./i";
 import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewModelClass";
 
 /**
@@ -52,7 +52,7 @@ export default function tLimits(args: controlLimitsArgs): controlLimitsObject {
   // Create a copy of args with transformed data and no denominators
   const inputArgsCopy: controlLimitsArgs = {
     numerators: val,
-    denominators: null,
+    denominators: undefined,
     keys: args.keys,
     subset_points: args.subset_points,
     outliers_in_limits: args.outliers_in_limits
@@ -61,20 +61,23 @@ export default function tLimits(args: controlLimitsArgs): controlLimitsObject {
   // Calculate I-chart limits on transformed data
   const limits: controlLimitsObject = iLimits(inputArgsCopy);
 
+  // Destructure limit arrays (iLimits always returns these for non-ratio mode)
+  const { targets, values, ll99, ll95, ll68, ul68, ul95, ul99 } = limits;
+
   // Back-transform all values and limits using power of 3.6
   for (let i = 0; i < n; i++) {
-    limits.targets[i] = Math.pow(limits.targets[i], 3.6);
-    limits.values[i] = Math.pow(limits.values[i], 3.6);
+    targets[i] = Math.pow(targets[i], 3.6);
+    values[i] = Math.pow(values[i], 3.6);
 
     // Back-transform lower limits and truncate at 0 (time cannot be negative)
-    limits.ll99![i] = Math.max(0, Math.pow(limits.ll99![i], 3.6));
-    limits.ll95![i] = Math.max(0, Math.pow(limits.ll95![i], 3.6));
-    limits.ll68![i] = Math.max(0, Math.pow(limits.ll68![i], 3.6));
+    ll99![i] = Math.max(0, Math.pow(ll99![i], 3.6));
+    ll95![i] = Math.max(0, Math.pow(ll95![i], 3.6));
+    ll68![i] = Math.max(0, Math.pow(ll68![i], 3.6));
 
     // Back-transform upper limits (no truncation needed)
-    limits.ul68![i] = Math.pow(limits.ul68![i], 3.6);
-    limits.ul95![i] = Math.pow(limits.ul95![i], 3.6);
-    limits.ul99![i] = Math.pow(limits.ul99![i], 3.6);
+    ul68![i] = Math.pow(ul68![i], 3.6);
+    ul95![i] = Math.pow(ul95![i], 3.6);
+    ul99![i] = Math.pow(ul99![i], 3.6);
   }
 
   return limits;

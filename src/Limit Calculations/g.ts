@@ -1,4 +1,5 @@
 import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewModelClass";
+import createLimitArrays from "./createLimitArrays";
 
 /**
  * Calculates control limits for a G-chart (Geometric chart).
@@ -55,7 +56,7 @@ import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewMode
 export default function gLimits(args: controlLimitsArgs): controlLimitsObject {
   // Extract input arrays from arguments
   const numerators: number[] = args.numerators;         // Counts (opportunities between events)
-  const subset_points: number[] = args.subset_points;   // Indices of points to include
+  const subset_points: number[] = args.subset_points;   // Indices of points to include (always provided by caller)
   const n_sub: number = subset_points.length;           // Number of points used for limit calculation
 
   // Array to store subset values for median calculation
@@ -91,31 +92,25 @@ export default function gLimits(args: controlLimitsArgs): controlLimitsObject {
 
   const n: number = args.keys.length; // Total number of data points
 
-  // Initialize the return object with arrays for all limit lines
-  let rtn: controlLimitsObject = {
-    keys: args.keys,
-    values: args.numerators,           // The plotted values (counts)
-    targets: new Array<number>(n),     // Centreline (median for display)
-    ll99: new Array<number>(n),        // Lower 3-sigma limit
-    ll95: new Array<number>(n),        // Lower 2-sigma limit
-    ll68: new Array<number>(n),        // Lower 1-sigma limit
-    ul68: new Array<number>(n),        // Upper 1-sigma limit
-    ul95: new Array<number>(n),        // Upper 2-sigma limit
-    ul99: new Array<number>(n)         // Upper 3-sigma limit
-  }
+  // Create local limit arrays (avoids strictNullChecks issues with optional fields)
+  const { targets, ll99, ll95, ll68, ul68, ul95, ul99 } = createLimitArrays(n);
 
   // Calculate control limits for each point
   // G-chart has constant limits (same sigma for all points)
   // Lower limits are 0 because counts cannot be negative
   for (let i = 0; i < n; i++) {
-    rtn.targets[i] = median_val;        // Use median as centreline for display
-    rtn.ll68[i] = 0;                    // Lower limits all 0 (geometric lower bound)
-    rtn.ll95[i] = 0;
-    rtn.ll99[i] = 0;
-    rtn.ul68[i] = cl + 1 * sigma;       // 1σ upper limit: ḡ + σ
-    rtn.ul95[i] = cl + 2 * sigma;       // 2σ upper limit: ḡ + 2σ
-    rtn.ul99[i] = cl + 3 * sigma;       // UCL: ḡ + 3σ
+    targets[i] = median_val;        // Use median as centreline for display
+    ll68[i] = 0;                    // Lower limits all 0 (geometric lower bound)
+    ll95[i] = 0;
+    ll99[i] = 0;
+    ul68[i] = cl + 1 * sigma;       // 1σ upper limit: ḡ + σ
+    ul95[i] = cl + 2 * sigma;       // 2σ upper limit: ḡ + 2σ
+    ul99[i] = cl + 3 * sigma;       // UCL: ḡ + 3σ
   }
 
-  return rtn;
+  return {
+    keys: args.keys,
+    values: args.numerators,
+    targets, ll99, ll95, ll68, ul68, ul95, ul99
+  };
 }

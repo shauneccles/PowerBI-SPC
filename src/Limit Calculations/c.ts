@@ -1,4 +1,5 @@
 import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewModelClass";
+import createLimitArrays from "./createLimitArrays";
 
 /**
  * Calculates control limits for a C-chart (Count chart).
@@ -47,9 +48,9 @@ import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewMode
  * @see {@link https://en.wikipedia.org/wiki/C-chart} for C-chart theory
  */
 export default function cLimits(args: controlLimitsArgs): controlLimitsObject {
-  const n_sub: number = args.subset_points.length;  // Number of points used for limit calculation
   const numerators: number[] = args.numerators;     // Count values for each sample
-  const subset_points: number[] = args.subset_points; // Indices of points to include
+  const subset_points: number[] = args.subset_points; // Indices of points to include (always provided by caller)
+  const n_sub: number = subset_points.length;  // Number of points used for limit calculation
 
   // Calculate the sum of counts for subset points to compute the centreline
   let cl: number = 0;
@@ -66,31 +67,25 @@ export default function cLimits(args: controlLimitsArgs): controlLimitsObject {
 
   const n: number = args.keys.length; // Total number of data points
 
-  // Initialize the return object with arrays for all limit lines
-  let rtn: controlLimitsObject = {
-    keys: args.keys,
-    values: args.numerators,       // The plotted values (counts)
-    targets: new Array<number>(n), // Centreline (average count)
-    ll99: new Array<number>(n),    // Lower 3-sigma limit
-    ll95: new Array<number>(n),    // Lower 2-sigma limit
-    ll68: new Array<number>(n),    // Lower 1-sigma limit
-    ul68: new Array<number>(n),    // Upper 1-sigma limit
-    ul95: new Array<number>(n),    // Upper 2-sigma limit
-    ul99: new Array<number>(n)     // Upper 3-sigma limit
-  }
+  // Create local limit arrays (avoids strictNullChecks issues with optional fields)
+  const { targets, ll99, ll95, ll68, ul68, ul95, ul99 } = createLimitArrays(n);
 
   // Calculate control limits for each point
   // C-chart has constant limits (same sigma for all points)
   // Lower limits are truncated at 0 since counts cannot be negative
   for (let i = 0; i < n; i++) {
-    rtn.targets[i] = cl;
-    rtn.ll99[i] = Math.max(0, cl - 3 * sigma); // LCL = max(0, c̄ - 3σ)
-    rtn.ll95[i] = Math.max(0, cl - 2 * sigma); // 2σ lower limit
-    rtn.ll68[i] = Math.max(0, cl - 1 * sigma); // 1σ lower limit
-    rtn.ul68[i] = cl + 1 * sigma;                          // 1σ upper limit
-    rtn.ul95[i] = cl + 2 * sigma;                          // 2σ upper limit
-    rtn.ul99[i] = cl + 3 * sigma;                          // UCL = c̄ + 3σ
+    targets[i] = cl;
+    ll99[i] = Math.max(0, cl - 3 * sigma); // LCL = max(0, c̄ - 3σ)
+    ll95[i] = Math.max(0, cl - 2 * sigma); // 2σ lower limit
+    ll68[i] = Math.max(0, cl - 1 * sigma); // 1σ lower limit
+    ul68[i] = cl + 1 * sigma;                          // 1σ upper limit
+    ul95[i] = cl + 2 * sigma;                          // 2σ upper limit
+    ul99[i] = cl + 3 * sigma;                          // UCL = c̄ + 3σ
   }
 
-  return rtn;
+  return {
+    keys: args.keys,
+    values: args.numerators,
+    targets, ll99, ll95, ll68, ul68, ul95, ul99
+  };
 }

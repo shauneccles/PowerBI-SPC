@@ -31,13 +31,13 @@ import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewMode
  */
 export default function runLimits(args: controlLimitsArgs): controlLimitsObject {
   // Determine if we're calculating ratios (numerator/denominator) or raw values
-  const useRatio: boolean = (args.denominators && args.denominators.length > 0);
+  const useRatio: boolean = !!(args.denominators && args.denominators.length > 0);
 
   // Extract input arrays from arguments
-  const n_sub: number = args.subset_points.length;          // Number of points used for median calculation
   const numerators: readonly number[] = args.numerators;    // Raw values or numerators for ratios
-  const denominators: readonly number[] = args.denominators; // Denominators for ratio calculation
-  const subset_points: readonly number[] = args.subset_points; // Indices of points to include
+  const denominators: readonly number[] = args.denominators ?? []; // Denominators for ratio calculation
+  const subset_points: readonly number[] = args.subset_points; // Indices of points to include (always provided by caller)
+  const n_sub: number = subset_points.length;          // Number of points used for median calculation
 
   // Extract subset values and store for median calculation
   let ratio_subset: number[] = new Array<number>(n_sub);
@@ -59,28 +59,22 @@ export default function runLimits(args: controlLimitsArgs): controlLimitsObject 
 
   const n: number = args.keys.length; // Total number of data points
 
-  // Initialize the return object with arrays for values and centreline
-  let rtn: controlLimitsObject = {
-    keys: args.keys,
-    values: new Array<number>(n),                          // The plotted values
-    numerators: useRatio ? args.numerators : undefined,    // Original numerators (if ratio)
-    denominators: useRatio ? args.denominators : undefined, // Original denominators (if ratio)
-    targets: new Array<number>(n)                          // Centreline (median)
-  }
+  // Create local arrays for values and centreline
+  const values = new Array<number>(n);
+  const targets = new Array<number>(n);
 
   // Calculate values and centreline for each point
   for (let i = 0; i < n; i++) {
     // Calculate the plotted value (raw or ratio)
-    if (useRatio) {
-      rtn.values[i] = numerators[i] / denominators[i];  // Ratio: numerator/denominator
-      rtn.numerators![i] = numerators[i];                // Store original numerator
-      rtn.denominators![i] = denominators[i];            // Store original denominator
-    } else {
-      rtn.values[i] = numerators[i];                     // Raw value
-    }
-
-    rtn.targets[i] = cl;  // Centreline: median
+    values[i] = useRatio ? numerators[i] / denominators[i] : numerators[i];
+    targets[i] = cl;  // Centreline: median
   }
 
-  return rtn;
+  return {
+    keys: args.keys,
+    values,
+    numerators: useRatio ? args.numerators : undefined,
+    denominators: useRatio ? args.denominators : undefined,
+    targets
+  };
 }

@@ -1,4 +1,5 @@
 import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewModelClass";
+import createLimitArrays from "./createLimitArrays";
 
 /**
  * Calculates control limits for a U-chart (rate per unit chart).
@@ -48,8 +49,8 @@ export default function uLimits(args: controlLimitsArgs): controlLimitsObject {
   // Extract input arrays from arguments
   const n: number = args.keys.length;                       // Total number of data points
   const numerators: readonly number[] = args.numerators;    // Nonconformity counts
-  const denominators: readonly number[] = args.denominators; // Sample sizes
-  const subset_points: readonly number[] = args.subset_points; // Indices of points to include
+  const denominators: readonly number[] = args.denominators!; // Sample sizes (always provided for U-chart)
+  const subset_points: readonly number[] = args.subset_points; // Indices of points to include (always provided by caller)
 
   // Calculate centreline: overall rate = total nonconformities / total units
   let sum_numerators: number = 0;
@@ -61,38 +62,33 @@ export default function uLimits(args: controlLimitsArgs): controlLimitsObject {
   }
   const cl: number = sum_numerators / sum_denominators;
 
-  // Initialize the return object with arrays for all limit lines
-  let rtn: controlLimitsObject = {
-    keys: args.keys,
-    values: new Array<number>(n),                          // The rates (nonconformities per unit)
-    numerators: args.numerators,                           // Original nonconformity counts
-    denominators: args.denominators,                       // Original sample sizes
-    targets: new Array<number>(n),                         // Centreline (overall rate)
-    ll99: new Array<number>(n),                            // Lower 3-sigma limit
-    ll95: new Array<number>(n),                            // Lower 2-sigma limit
-    ll68: new Array<number>(n),                            // Lower 1-sigma limit
-    ul68: new Array<number>(n),                            // Upper 1-sigma limit
-    ul95: new Array<number>(n),                            // Upper 2-sigma limit
-    ul99: new Array<number>(n)                             // Upper 3-sigma limit
-  }
+  // Create local limit arrays (avoids strictNullChecks issues with optional fields)
+  const values = new Array<number>(n);
+  const { targets, ll99, ll95, ll68, ul68, ul95, ul99 } = createLimitArrays(n);
 
   // Calculate control limits for each point
   // U-chart has variable limits based on sample size
   for (let i = 0; i < n; i++) {
     // Calculate the rate for this sample
-    rtn.values[i] = numerators[i] / denominators[i];
+    values[i] = numerators[i] / denominators[i];
 
     // Calculate sigma for this sample size: σ = sqrt(ū / n)
     const sigma: number = Math.sqrt(cl / denominators[i]);
 
-    rtn.targets[i] = cl;                                   // Centreline: ū
-    rtn.ll99[i] = Math.max(0, cl - 3 * sigma);             // LCL: max(0, ū - 3σ)
-    rtn.ll95[i] = Math.max(0, cl - 2 * sigma);             // 2σ lower: max(0, ū - 2σ)
-    rtn.ll68[i] = Math.max(0, cl - 1 * sigma);             // 1σ lower: max(0, ū - σ)
-    rtn.ul68[i] = cl + 1 * sigma;                          // 1σ upper: ū + σ
-    rtn.ul95[i] = cl + 2 * sigma;                          // 2σ upper: ū + 2σ
-    rtn.ul99[i] = cl + 3 * sigma;                          // UCL: ū + 3σ
+    targets[i] = cl;                                   // Centreline: ū
+    ll99[i] = Math.max(0, cl - 3 * sigma);             // LCL: max(0, ū - 3σ)
+    ll95[i] = Math.max(0, cl - 2 * sigma);             // 2σ lower: max(0, ū - 2σ)
+    ll68[i] = Math.max(0, cl - 1 * sigma);             // 1σ lower: max(0, ū - σ)
+    ul68[i] = cl + 1 * sigma;                          // 1σ upper: ū + σ
+    ul95[i] = cl + 2 * sigma;                          // 2σ upper: ū + 2σ
+    ul99[i] = cl + 3 * sigma;                          // UCL: ū + 3σ
   }
 
-  return rtn;
+  return {
+    keys: args.keys,
+    values,
+    numerators: args.numerators,
+    denominators: args.denominators,
+    targets, ll99, ll95, ll68, ul68, ul95, ul99
+  };
 }

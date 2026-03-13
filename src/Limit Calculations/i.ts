@@ -1,4 +1,5 @@
 import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewModelClass";
+import createLimitArrays from "./createLimitArrays";
 
 /**
  * Calculates control limits for an I-chart (Individuals chart), also known as an XmR chart.
@@ -63,13 +64,13 @@ import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewMode
  */
 export default function iLimits(args: controlLimitsArgs): controlLimitsObject {
   // Determine if we're calculating ratios (numerator/denominator) or raw values
-  const useRatio: boolean = (args.denominators && args.denominators.length > 0);
+  const useRatio: boolean = !!(args.denominators && args.denominators.length > 0);
 
   // Extract input arrays from arguments
-  const n_sub: number = args.subset_points.length;          // Number of points used for limit calculation
   const numerators: readonly number[] = args.numerators;    // Raw values or numerators for ratios
-  const denominators: readonly number[] = args.denominators; // Denominators for ratio calculation
-  const subset_points: readonly number[] = args.subset_points; // Indices of points to include
+  const denominators: readonly number[] = args.denominators ?? []; // Denominators for ratio calculation
+  const subset_points: readonly number[] = args.subset_points; // Indices of points to include (always provided by caller)
+  const n_sub: number = subset_points.length;          // Number of points used for limit calculation
 
   // Initialize with first value (for moving range calculation we need previous value)
   let prevVal: number = useRatio ? numerators[subset_points[0]] / denominators[subset_points[0]]
@@ -123,41 +124,30 @@ export default function iLimits(args: controlLimitsArgs): controlLimitsObject {
 
   const n: number = args.keys.length; // Total number of data points
 
-  // Initialize the return object with arrays for all limit lines
-  let rtn: controlLimitsObject = {
-    keys: args.keys,
-    values: new Array<number>(n),                          // The plotted values
-    numerators: useRatio ? args.numerators : undefined,    // Original numerators (if ratio)
-    denominators: useRatio ? args.denominators : undefined, // Original denominators (if ratio)
-    targets: new Array<number>(n),                         // Centreline (mean)
-    ll99: new Array<number>(n),                            // Lower 3-sigma limit
-    ll95: new Array<number>(n),                            // Lower 2-sigma limit
-    ll68: new Array<number>(n),                            // Lower 1-sigma limit
-    ul68: new Array<number>(n),                            // Upper 1-sigma limit
-    ul95: new Array<number>(n),                            // Upper 2-sigma limit
-    ul99: new Array<number>(n)                             // Upper 3-sigma limit
-  }
+  // Create local limit arrays (avoids strictNullChecks issues with optional fields)
+  const values = new Array<number>(n);
+  const { targets, ll99, ll95, ll68, ul68, ul95, ul99 } = createLimitArrays(n);
 
   // Calculate control limits for each point
   // I-chart has constant limits (same sigma for all points)
   for (let i = 0; i < n; i++) {
     // Calculate the plotted value (raw or ratio)
-    if (useRatio) {
-      rtn.values[i] = numerators[i] / denominators[i];  // Ratio: numerator/denominator
-      rtn.numerators![i] = numerators[i];                // Store original numerator
-      rtn.denominators![i] = denominators[i];            // Store original denominator
-    } else {
-      rtn.values[i] = numerators[i];                     // Raw value
-    }
+    values[i] = useRatio ? numerators[i] / denominators[i] : numerators[i];
 
-    rtn.targets[i] = cl;               // Centreline: x̄
-    rtn.ll99[i] = cl - 3 * sigma;      // LCL: x̄ - 3σ
-    rtn.ll95[i] = cl - 2 * sigma;      // 2σ lower limit: x̄ - 2σ
-    rtn.ll68[i] = cl - 1 * sigma;      // 1σ lower limit: x̄ - σ
-    rtn.ul68[i] = cl + 1 * sigma;      // 1σ upper limit: x̄ + σ
-    rtn.ul95[i] = cl + 2 * sigma;      // 2σ upper limit: x̄ + 2σ
-    rtn.ul99[i] = cl + 3 * sigma;      // UCL: x̄ + 3σ
+    targets[i] = cl;               // Centreline: x̄
+    ll99[i] = cl - 3 * sigma;      // LCL: x̄ - 3σ
+    ll95[i] = cl - 2 * sigma;      // 2σ lower limit: x̄ - 2σ
+    ll68[i] = cl - 1 * sigma;      // 1σ lower limit: x̄ - σ
+    ul68[i] = cl + 1 * sigma;      // 1σ upper limit: x̄ + σ
+    ul95[i] = cl + 2 * sigma;      // 2σ upper limit: x̄ + 2σ
+    ul99[i] = cl + 3 * sigma;      // UCL: x̄ + 3σ
   }
 
-  return rtn;
+  return {
+    keys: args.keys,
+    values,
+    numerators: useRatio ? args.numerators : undefined,
+    denominators: useRatio ? args.denominators : undefined,
+    targets, ll99, ll95, ll68, ul68, ul95, ul99
+  };
 }

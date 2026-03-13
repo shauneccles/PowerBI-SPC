@@ -1,5 +1,6 @@
 import { b3, b4 } from "../Functions/sampleConstants";
 import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewModelClass";
+import createLimitArrays from "./createLimitArrays";
 
 /**
  * Calculates control limits for an S-chart (Standard Deviation chart).
@@ -56,8 +57,9 @@ import type { controlLimitsObject, controlLimitsArgs } from "../Classes/viewMode
 export default function sLimits(args: controlLimitsArgs): controlLimitsObject {
   // Extract input arrays from arguments
   const group_sd: number[] = args.numerators;       // Standard deviation of each subgroup
-  const count_per_group: number[] = args.denominators; // Sample size of each subgroup
-  const n_sub: number = args.subset_points.length;  // Number of points used for limit calculation
+  const count_per_group: number[] = args.denominators!; // Sample size of each subgroup (always provided for S-chart)
+  const subset_points: number[] = args.subset_points; // Indices of points to include (always provided by caller)
+  const n_sub: number = subset_points.length;  // Number of points used for limit calculation
 
   // Accumulators for pooled variance calculation
   let Nm1_sum: number = 0;           // Sum of degrees of freedom (n-1) across subgroups
@@ -66,8 +68,8 @@ export default function sLimits(args: controlLimitsArgs): controlLimitsObject {
   // Calculate pooled variance components using only the subset points
   // The pooled variance formula is: s_pooled² = Σ[(n_i - 1) * s_i²] / Σ(n_i - 1)
   for (let i = 0; i < n_sub; i++) {
-    const curr_count: number = count_per_group[args.subset_points[i]];
-    const curr_sd: number = group_sd[args.subset_points[i]];
+    const curr_count: number = count_per_group[subset_points[i]];
+    const curr_sd: number = group_sd[subset_points[i]];
     const Nm1: number = curr_count - 1; // Degrees of freedom for this subgroup
 
     Nm1_sum += Nm1;
@@ -80,31 +82,25 @@ export default function sLimits(args: controlLimitsArgs): controlLimitsObject {
 
   const n: number = args.keys.length; // Total number of data points
 
-  // Initialize the return object with arrays for all limit lines
-  let rtn: controlLimitsObject = {
-    keys: args.keys,
-    values: group_sd,              // The plotted values (subgroup SDs)
-    targets: new Array<number>(n), // Centreline (pooled SD)
-    ll99: new Array<number>(n),    // Lower 3-sigma limit
-    ll95: new Array<number>(n),    // Lower 2-sigma limit
-    ll68: new Array<number>(n),    // Lower 1-sigma limit
-    ul68: new Array<number>(n),    // Upper 1-sigma limit
-    ul95: new Array<number>(n),    // Upper 2-sigma limit
-    ul99: new Array<number>(n)     // Upper 3-sigma limit
-  }
+  // Create local limit arrays (avoids strictNullChecks issues with optional fields)
+  const { targets, ll99, ll95, ll68, ul68, ul95, ul99 } = createLimitArrays(n);
 
   // Calculate control limits for each point
   // Limits depend on subgroup size via B3 and B4 constants
   // B3 = 1 - (k * c5/c4), B4 = 1 + (k * c5/c4), where k is the sigma multiplier
   for (let i = 0; i < n; i++) {
-    rtn.targets[i] = cl;
-    rtn.ll99[i] = cl * b3(count_per_group[i], 3); // 3-sigma lower limit
-    rtn.ll95[i] = cl * b3(count_per_group[i], 2); // 2-sigma lower limit
-    rtn.ll68[i] = cl * b3(count_per_group[i], 1); // 1-sigma lower limit
-    rtn.ul68[i] = cl * b4(count_per_group[i], 1); // 1-sigma upper limit
-    rtn.ul95[i] = cl * b4(count_per_group[i], 2); // 2-sigma upper limit
-    rtn.ul99[i] = cl * b4(count_per_group[i], 3); // 3-sigma upper limit
+    targets[i] = cl;
+    ll99[i] = cl * b3(count_per_group[i], 3); // 3-sigma lower limit
+    ll95[i] = cl * b3(count_per_group[i], 2); // 2-sigma lower limit
+    ll68[i] = cl * b3(count_per_group[i], 1); // 1-sigma lower limit
+    ul68[i] = cl * b4(count_per_group[i], 1); // 1-sigma upper limit
+    ul95[i] = cl * b4(count_per_group[i], 2); // 2-sigma upper limit
+    ul99[i] = cl * b4(count_per_group[i], 3); // 3-sigma upper limit
   }
 
-  return rtn;
+  return {
+    keys: args.keys,
+    values: group_sd,
+    targets, ll99, ll95, ll68, ul68, ul95, ul99
+  };
 }
