@@ -191,7 +191,7 @@ const settingsModel = {
         num_points_subset: {
           displayName: "Subset Number of Points for Limit Calculations",
           type: FormattingComponent.NumUpDown,
-          default: <number>null
+          default: null as number | null
         },
         subset_points_from: {
           displayName: "Subset Points From",
@@ -246,12 +246,12 @@ const settingsModel = {
         ll_truncate: {
           displayName: "Truncate Lower Limits at:",
           type: FormattingComponent.NumUpDown,
-          default: <number>null
+          default: null as number | null
         },
         ul_truncate: {
           displayName: "Truncate Upper Limits at:",
           type: FormattingComponent.NumUpDown,
-          default: <number>null
+          default: null as number | null
         }
       }
     }
@@ -516,7 +516,7 @@ const settingsModel = {
         alt_target: {
           displayName: "Additional Target Value:",
           type: FormattingComponent.NumUpDown,
-          default: <number>null
+          default: null as number | null
         },
         multiplier_alt_target: {
           displayName: "Apply Multiplier to Alt. Target",
@@ -566,12 +566,12 @@ const settingsModel = {
         specification_upper: {
           displayName: "Upper Specification Limit:",
           type: FormattingComponent.NumUpDown,
-          default: <number>null
+          default: null as number | null
         },
         specification_lower: {
           displayName: "Lower Specification Limit:",
           type: FormattingComponent.NumUpDown,
-          default: <number>null
+          default: null as number | null
         },
         multiplier_specification: {
           displayName: "Apply Multiplier to Specification Limits",
@@ -616,12 +616,12 @@ const settingsModel = {
         xlimit_l: {
           displayName: "Lower Limit",
           type: FormattingComponent.NumUpDown,
-          default:<number>null
+          default: null as number | null
         },
         xlimit_u: {
           displayName: "Upper Limit",
           type: FormattingComponent.NumUpDown,
-          default:<number>null
+          default: null as number | null
         }
       },
       "Ticks": {
@@ -654,7 +654,7 @@ const settingsModel = {
         xlimit_label: {
           displayName: "Label",
           type: FormattingComponent.TextInput,
-          default: <string>null
+          default: null as string | null
         },
         xlimit_label_font: fontPicker("Label Font", textOptions.font.default),
         xlimit_label_size: fontSize("Label Font Size", textOptions.size.default),
@@ -690,18 +690,18 @@ const settingsModel = {
         ylimit_sig_figs: {
           displayName: "Tick Decimal Places",
           type: FormattingComponent.NumUpDown,
-          default:<number>null,
+          default: null as number | null,
           options: { minValue: { value: 0 }, maxValue: { value: 100 } }
         },
         ylimit_l: {
           displayName: "Lower Limit",
           type: FormattingComponent.NumUpDown,
-          default:<number>null
+          default: null as number | null
         },
         ylimit_u: {
           displayName: "Upper Limit",
           type: FormattingComponent.NumUpDown,
-          default:<number>null
+          default: null as number | null
         }
       },
       "Ticks": {
@@ -734,7 +734,7 @@ const settingsModel = {
         ylimit_label: {
           displayName: "Label",
           type: FormattingComponent.TextInput,
-          default: <string>null
+          default: null as string | null
         },
         ylimit_label_font: fontPicker("Label Font", textOptions.font.default),
         ylimit_label_size: fontSize("Label Font Size", textOptions.size.default),
@@ -1183,9 +1183,9 @@ export type defaultSettingsType = {
 export type defaultSettingsKeys = keyof defaultSettingsType;
 export type defaultSettingsNestedKeys = NestedKeysOf<defaultSettingsType[defaultSettingsKeys]>;
 
-const defaultSettingsArray = [];
+const defaultSettingsArray: [string, Record<string, unknown>][] = [];
 for (const key in settingsModel) {
-  const curr_card = [];
+  const curr_card: [string, unknown][] = [];
   for (const group in settingsModel[key].settingsGroups) {
     for (const setting in settingsModel[key].settingsGroups[group]) {
       curr_card.push([setting, settingsModel[key].settingsGroups[group][setting]]);
