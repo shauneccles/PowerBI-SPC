@@ -16,23 +16,23 @@ import type derivedSettingsClass from "../Classes/derivedSettingsClass";
 import type { ValidationT } from "./validateInputData";
 
 export type dataObject = {
-  limitInputArgs: controlLimitsArgs;
-  spcSettings: defaultSettingsType["spc"];
-  highlights: PrimitiveValue[];
+  limitInputArgs: controlLimitsArgs | null;
+  spcSettings: defaultSettingsType["spc"] | null;
+  highlights: PrimitiveValue[] | null;
   anyHighlights: boolean;
-  categories: DataViewCategoryColumn;
-  groupings: string[];
-  groupingIndexes: number[];
-  scatter_formatting: defaultSettingsType["scatter"][];
-  line_formatting: defaultSettingsType["lines"][];
-  label_formatting: defaultSettingsType["labels"][];
-  tooltips: VisualTooltipDataItem[][];
-  labels: string[];
+  categories: DataViewCategoryColumn | null;
+  groupings: string[] | null;
+  groupingIndexes: number[] | null;
+  scatter_formatting: defaultSettingsType["scatter"][] | null;
+  line_formatting: defaultSettingsType["lines"][] | null;
+  label_formatting: defaultSettingsType["labels"][] | null;
+  tooltips: VisualTooltipDataItem[][] | null;
+  labels: string[] | null;
   anyLabels: boolean;
   warningMessage: string;
-  alt_targets: number[];
-  speclimits_lower: number[];
-  speclimits_upper: number[];
+  alt_targets: number[] | null;
+  speclimits_lower: number[] | null;
+  speclimits_upper: number[] | null;
   validationStatus: ValidationT;
 }
 

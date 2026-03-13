@@ -35,27 +35,27 @@ export type viewModelValidationT = {
 
 export type lineData = {
   x: number;
-  line_value: number;
+  line_value: number | null;
   group: string;
   aesthetics: defaultSettingsType["lines"];
 }
 
 export type summaryTableRowData = {
   date: string;
-  numerator: number;
-  denominator: number;
+  numerator: number | undefined;
+  denominator: number | undefined;
   value: number;
   target: number;
-  alt_target: number;
-  ll99: number;
-  ll95: number;
-  ll68: number;
-  ul68: number;
-  ul95: number;
-  ul99: number;
-  speclimits_lower: number;
-  speclimits_upper: number;
-  trend_line: number;
+  alt_target: number | undefined;
+  ll99: number | undefined;
+  ll95: number | undefined;
+  ll68: number | undefined;
+  ul68: number | undefined;
+  ul95: number | undefined;
+  ul99: number | undefined;
+  speclimits_lower: number | undefined;
+  speclimits_upper: number | undefined;
+  trend_line: number | undefined;
   astpoint: string;
   trend: string;
   shift: string;
@@ -93,10 +93,10 @@ export type plotData = {
   label: {
     text_value: string,
     aesthetics: defaultSettingsType["labels"],
-    angle: number,
-    distance: number,
-    line_offset: number,
-    marker_offset: number
+    angle: number | null,
+    distance: number | null,
+    line_offset: number | null,
+    marker_offset: number | null
   };
 }
 
@@ -153,15 +153,15 @@ export type colourPaletteType = {
 export default class viewModelClass {
   inputData: dataObject[];
   inputSettings: settingsClass;
-  controlLimits: controlLimitsObject[];
-  outliers: outliersObject[];
+  controlLimits: (controlLimitsObject | null)[];
+  outliers: (outliersObject | null)[];
   plotPoints: (plotData[] | plotDataGrouped[])[];
   groupedLines: [string, lineData[]][];
   tickLabels: { x: number; label: string; }[];
   splitIndexes: number[];
   groupStartEndIndexes: number[][][];
   firstRun: boolean;
-  colourPalette: colourPaletteType;
+  colourPalette: colourPaletteType | null;
   tableColumns: { name: string; label: string; }[][];
   svgWidth: number;
   svgHeight: number;

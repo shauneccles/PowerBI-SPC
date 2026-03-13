@@ -11,7 +11,7 @@ import isNullOrUndefined from "./isNullOrUndefined";
 
 type SettingsTypes = defaultSettingsType[defaultSettingsKeys];
 export type SettingsValidationT = { status: number, messages: string[][], error?: string };
-export type ConditionalReturnT<T extends SettingsTypes> = { values: T[], validation: SettingsValidationT }
+export type ConditionalReturnT<T extends SettingsTypes> = { values: T[] | null, validation: SettingsValidationT }
 
 function getSettingValue<T>(settingObject: DataViewObjects, settingGroup: string, settingName: string, defaultValue: T): T {
   const propertyValue: powerbi.DataViewPropertyValue = settingObject?.[settingGroup]?.[settingName];
