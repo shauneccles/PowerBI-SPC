@@ -34,7 +34,10 @@ export class Visual implements powerbi.extensibility.IVisual {
   plotProperties: plotPropertiesClass;
   selectionManager: powerbi.extensibility.ISelectionManager;
 
-  constructor(options: powerbi.extensibility.visual.VisualConstructorOptions) {
+  constructor(options?: powerbi.extensibility.visual.VisualConstructorOptions) {
+    if (!options) {
+      throw new Error("VisualConstructorOptions is required");
+    }
     this.tableDiv = d3.select(options.element).append("div")
                                               .style("overflow", "auto");
 
@@ -70,7 +73,7 @@ export class Visual implements powerbi.extensibility.IVisual {
       if (!update_status.status) {
         this.resizeCanvas(options.viewport.width, options.viewport.height);
         if (this.viewModel?.inputSettings?.settings?.[0]?.canvas?.show_errors ?? true) {
-          this.svg.call(drawErrors, options, this.viewModel.colourPalette, update_status?.error, update_status?.type);
+          this.svg.call(drawErrors, options, this.viewModel.colourPalette!, update_status?.error ?? "", update_status?.type);
         } else {
           this.svg.call(initialiseSVG, true);
         }
@@ -100,7 +103,7 @@ export class Visual implements powerbi.extensibility.IVisual {
       this.host.eventService.renderingFinished(options);
     } catch (caught_error) {
       this.resizeCanvas(options.viewport.width, options.viewport.height);
-      this.svg.call(drawErrors, options, this.viewModel.colourPalette, caught_error.message, "internal");
+      this.svg.call(drawErrors, options, this.viewModel.colourPalette!, (caught_error as Error).message, "internal");
       console.error(caught_error)
       this.host.eventService.renderingFailed(options);
     }
@@ -126,7 +129,7 @@ export class Visual implements powerbi.extensibility.IVisual {
     }
     const svgWidth: number = this.viewModel.svgWidth;
     const svgHeight: number = this.viewModel.svgHeight;
-    const svgBBox: DOMRect = this.svg.node().getBBox();
+    const svgBBox: DOMRect = this.svg.node()!.getBBox();
     const overflowLeft: number = Math.abs(Math.min(0, svgBBox.x));
     const overflowRight: number = Math.max(0, svgBBox.width + svgBBox.x - svgWidth);
     const overflowTop: number = Math.abs(Math.min(0, svgBBox.y));
